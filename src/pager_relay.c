@@ -2,16 +2,20 @@
 #include <curl/curl.h>
 
 #include <stdio.h>
+#include <stdbool.h>
+
+#include "include/error.h"
+#include "include/settings.h"
 
 int main() {
-    CURL *curl;
-    struct json_object *obj = json_object_new_object();
-    printf("%p\n", obj);
+    int ret;
+    RelaySettings *s;
 
-    if ((curl = curl_easy_init()) == NULL) {
-        fprintf(stderr, "Unable to initalize curl\n");
-        return 1;
+    if ((ret = settings_read(s)) != E_SUCCESS) {
+        return ret;
     }
+
+    settings_free(s);
 
     return 0;
 }

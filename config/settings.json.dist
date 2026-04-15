@@ -1,0 +1,10 @@
+{
+    "email": {
+        "sender": "",
+        "receipients": [],
+        "password": ""
+    },
+    "brightwheel": {
+        "token": ""
+    }
+}
