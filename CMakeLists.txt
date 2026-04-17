@@ -3,12 +3,13 @@ cmake_minimum_required(VERSION 3.28)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 project(pager-relay)
-file(GLOB SRCS **/*.c)
+file(GLOB SRCS src/*.c)
+file(GLOB SRCS_BRIGHT src/brightwheel/*.c)
 message(STATUS "SRCS: ${SRCS}")
 
-add_executable(pager-relay ${SRCS})
+add_executable(pager-relay ${SRCS} ${SRCS_BRIGHT})
 target_compile_options(pager-relay PRIVATE -g)
-target_include_directories(pager-relay PRIVATE ./src/include/ PUBLIC ./include/)
+target_include_directories(pager-relay PRIVATE ./src/include/ PUBLIC ./include/ PRIVATE ./src/brightwheel/include/)
 
 # libcurl
 find_package(CURL REQUIRED)

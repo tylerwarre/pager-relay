@@ -5,7 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "include/error.h"
+#include "error.h"
 #include "settings.h"
 
 int settings_read(RelaySettings *s) {
