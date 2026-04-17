@@ -7,6 +7,7 @@ file(GLOB SRCS **/*.c)
 message(STATUS "SRCS: ${SRCS}")
 
 add_executable(pager-relay ${SRCS})
+target_compile_options(pager-relay PRIVATE -g)
 target_include_directories(pager-relay PRIVATE ./src/include/ PUBLIC ./include/)
 
 # libcurl

@@ -8,12 +8,18 @@
 #include "include/settings.h"
 
 int main() {
-    int ret;
-    RelaySettings *s;
+    int ret = E_SUCCESS;
+    RelaySettings *s = NULL;
+
+    if ((s = settings_new()) == NULL) {
+        return E_OUTOFMEMORY;
+    }
 
     if ((ret = settings_read(s)) != E_SUCCESS) {
         return ret;
     }
+
+    printf("token: %s", s->brightwheel->token);
 
     settings_free(s);
 
