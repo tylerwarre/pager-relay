@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.28)
 
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+#set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 project(pager-relay)
 file(GLOB SRCS src/*.c)

@@ -2,10 +2,23 @@
   "version": 2,
   "configurePresets": [
     {
-      "name": "default",
+      "name": "debug",
       "inherits": "vcpkg",
       "environment": {
         "VCPKG_ROOT": "/opt/vcpkg"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "release",
+      "inherits": "vcpkg",
+      "environment": {
+        "VCPKG_ROOT": "/opt/vcpkg"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
       }
     }
   ]

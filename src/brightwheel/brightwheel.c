@@ -1,4 +1,5 @@
 #include <stdbool.h>
+#include <string.h>
 
 #include <curl/curl.h>
 
@@ -9,11 +10,22 @@ struct json_object* bright_get_msgs(BrightwheelSettings *s) {
     CURL *curl = NULL;
     CURLcode errno = CURLE_OK;
     HttpResponse resp = {0};
+    char *cookies = NULL;
     
     if ((curl = curl_easy_init()) == NULL) {
         fprintf(stderr, "[%s] Unable to initalize curl for request\n", __func__);
         return NULL;
     }
+
+    // Build cookies
+    // +1 to account for NULL characer
+    // +16 for length of cookie key
+    if ((cookies = calloc(strlen(s->token)+1+16, 1)) == NULL) {
+        fprintf(stderr, "[%s] Unable to allocate memory for cookies\n", __func__);
+        return NULL;
+    }
+    strcpy(cookies, "_brightwheel_v2=");
+    strcat(cookies, s->token);
 
     // Set URL
     curl_easy_setopt(curl, CURLOPT_URL, BRIGHT_API_URL);
@@ -25,7 +37,11 @@ struct json_object* bright_get_msgs(BrightwheelSettings *s) {
     // Assign buffer for curl response
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, cb_http_write);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &resp);
-    //curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+    // Setup authentication cookie
+    curl_easy_setopt(curl, CURLOPT_COOKIE, cookies);
+    #ifndef NDEBUG
+        curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+    #endif
 
     while (true) {
         if ((errno = curl_easy_perform(curl)) != CURLE_OK) {
@@ -35,6 +51,11 @@ struct json_object* bright_get_msgs(BrightwheelSettings *s) {
         // TODO: Implement parsing as json
         printf("response: %s\n", resp.data);
         break;
+    }
+
+    if (cookies != NULL) {
+        free(cookies);
+        cookies = NULL;
     }
 
     if (resp.data != NULL) {
