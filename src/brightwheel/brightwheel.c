@@ -1,5 +1,7 @@
 #include <stdbool.h>
 #include <string.h>
+#define __USE_XOPEN // Required for strptime
+#include <time.h>
 
 #include <curl/curl.h>
 #include <json-c/json.h>
@@ -52,7 +54,14 @@ int bright_get_msgs(BrightwheelSettings *s, struct json_object **msgs) {
         }
 
         if ((*msgs = bright_parse_msgs(s, resp.data)) == NULL) {
+            fprintf(stderr, "[%s] Unable to parse json response\n", __func__);
             ret = E_JSON_PARSE;
+            break;
+        }
+
+        if (json_object_object_get_ex(*msgs, "results", msgs) == false) {
+            fprintf(stderr, "[%s] Unable to get results array from response\n", __func__);
+            ret = E_JSON_ACCESS;
             break;
         }
 
@@ -70,6 +79,81 @@ int bright_get_msgs(BrightwheelSettings *s, struct json_object **msgs) {
     }
 
     curl_easy_cleanup(curl);
+
+    return ret;
+}
+
+int bright_get_last_msg(BrightState *state, json_object *msgs, char *msg) {
+    int len = 0;
+    int ret = E_SUCCESS;
+    struct json_object *j_msg = NULL;
+    struct json_object *j_obj = NULL;
+    struct tm tm = {0};
+    time_t timestamp;
+    const char *str = NULL;
+
+    if((len = json_object_array_length(msgs)) < 1) {
+        fprintf(stderr, "[%s] message array is empty\n", __func__);
+        return E_EMPTY;
+    }
+
+    // TODO: Testing
+    //state->lastTimestamp = 1776222379;
+
+    // TODO: handle case when 1st message is newer, but last
+    for (int i = 0; i < len; i++) {
+        if ((j_msg = json_object_array_get_idx(msgs, i)) == NULL) {
+            fprintf(stderr, "[%s] Unable to get message at index: %d\n", __func__, i);
+            ret =  E_JSON_PARSE;
+            break;
+        }
+
+        // Get "message" object
+        if (json_object_object_get_ex(j_msg, "message", &j_msg) == false) {
+            fprintf(stderr, "[%s] Unable to get message data at index: %d\n", __func__, i);
+            ret = E_JSON_PARSE;
+            break;
+        }
+
+        // Get message timestamp object
+        if (json_object_object_get_ex(j_msg, "created_at", &j_obj) == false) {
+            fprintf(stderr, "[%s] Unable to get message timestamp at index: %d\n", __func__, i);
+            ret = E_JSON_PARSE;
+            break;
+        }
+
+        if ((str = json_object_get_string(j_obj)) == NULL) {
+            fprintf(stderr, "[%s] Unable to access message timestamp string\n", __func__);
+            ret = E_JSON_ACCESS;
+            break;
+        }
+
+        if (strptime(str, TIMESTAMP_FMT, &tm) == NULL) {
+            fprintf(stderr, "[%s] Unable to convert timestamp string to time object\n", __func__);
+            ret = E_CONVERT;
+            break;
+        }
+
+        if ((timestamp = mktime(&tm)) == (time_t)-1) {
+            fprintf(stderr, "[%s] Unable to convert timestamp object\n", __func__);
+            ret = E_CONVERT;
+            break;
+        }
+
+        // Check if there are no new messages
+        if (state->lastTimestamp > timestamp && i == 0) {
+            printf("No new message\n");
+            break;
+        }
+        // TODO: verify this works
+        // TODO: do something if we know we have a new message
+        else if (timestamp > state->lastTimestamp)
+        {
+            printf("New message!\n");
+            break;
+        }
+        
+    }
 
     return ret;
 }

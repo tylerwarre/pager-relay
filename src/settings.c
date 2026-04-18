@@ -40,7 +40,7 @@ int settings_read(RelaySettings *s) {
         if ((ret = settings_validate(s)) != E_SUCCESS) {
             break;
         }
-        // TODO implement email settings
+        // TODO: implement email settings
         break;
     }
 
@@ -53,10 +53,10 @@ int settings_read(RelaySettings *s) {
 static int settings_validate(RelaySettings *s) {
     if (strlen(s->brightwheel->token) == 0) {
         fprintf(stderr, "Brightwheel token is empty");
-        return E_SETTINGS_EMPTY;
+        return E_EMPTY;
     }
 
-    // TODO implement email settings
+    // TODO: implement email settings
 
     return E_SUCCESS;
 }
@@ -137,7 +137,7 @@ static void settings_email_free(EmailSettings *s) {
         s->password = NULL;
     }
 
-    // TODO implement email free
+    // TODO: implement email free
     if (s != NULL) {
         free(s);
         s = NULL;
