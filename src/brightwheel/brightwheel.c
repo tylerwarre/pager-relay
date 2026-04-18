@@ -6,17 +6,17 @@
 
 #include "brightwheel.h"
 #include "http.h"
+#include "error.h"
 
-struct json_object* bright_get_msgs(BrightwheelSettings *s) {
+int bright_get_msgs(BrightwheelSettings *s, struct json_object **msgs) {
     CURL *curl = NULL;
-    CURLcode errno = CURLE_OK;
+    CURLcode ret = E_SUCCESS;
     HttpResponse resp = {0};
     char *cookies = NULL;
-    struct json_object *j_msgs = NULL;
     
     if ((curl = curl_easy_init()) == NULL) {
         fprintf(stderr, "[%s] Unable to initalize curl for request\n", __func__);
-        return NULL;
+        return (int)CURLE_FAILED_INIT;
     }
 
     // Build cookies
@@ -24,7 +24,7 @@ struct json_object* bright_get_msgs(BrightwheelSettings *s) {
     // +16 for length of cookie key
     if ((cookies = calloc(strlen(s->token)+1+16, 1)) == NULL) {
         fprintf(stderr, "[%s] Unable to allocate memory for cookies\n", __func__);
-        return NULL;
+        return E_OUTOFMEMORY;
     }
     strcpy(cookies, "_brightwheel_v2=");
     strcat(cookies, s->token);
@@ -46,12 +46,13 @@ struct json_object* bright_get_msgs(BrightwheelSettings *s) {
     #endif
 
     while (true) {
-        if ((errno = curl_easy_perform(curl)) != CURLE_OK) {
-            fprintf(stderr, "[%s] Unable to process curl request: %s\n", __func__, curl_easy_strerror(errno));
+        if ((ret = curl_easy_perform(curl)) != CURLE_OK) {
+            fprintf(stderr, "[%s] Unable to process curl request: %s\n", __func__, curl_easy_strerror(ret));
             break;
         }
 
-        if ((j_msgs = bright_parse_msgs(s, resp.data)) == NULL) {
+        if ((*msgs = bright_parse_msgs(s, resp.data)) == NULL) {
+            ret = E_JSON_PARSE;
             break;
         }
 
@@ -70,7 +71,7 @@ struct json_object* bright_get_msgs(BrightwheelSettings *s) {
 
     curl_easy_cleanup(curl);
 
-    return j_msgs;
+    return ret;
 }
 
 static struct json_object* bright_parse_msgs(BrightwheelSettings *s, char *msgs) {

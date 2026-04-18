@@ -17,19 +17,19 @@ int settings_read(RelaySettings *s) {
     while (true) {
         if ((root = json_object_from_file("settings.json")) == NULL) {
             fprintf(stderr, "Unable to load settings: %s\n", json_util_get_last_err());
-            ret = E_SETTINGS_PARSE;
+            ret = E_JSON_PARSE;
             break;
         }
 
         if(json_object_object_get_ex(root, "brightwheel", &node) == false) {
             fprintf(stderr, "Unable to load brightwheel settings: %s\n", json_util_get_last_err());
-            ret =  E_SETTINGS_PARSE;
+            ret =  E_JSON_PARSE;
             break;
         }
 
         if(json_object_object_get_ex(node, "token", &obj) == false) {
             fprintf(stderr, "Unable to load brightwheel token: %s\n", json_util_get_last_err());
-            ret =  E_SETTINGS_PARSE;
+            ret =  E_JSON_PARSE;
             break;
         }
 
@@ -67,7 +67,7 @@ static int settings_get_str(struct json_object *obj, char **dest) {
 
     if((str = json_object_get_string(obj)) == NULL) {
         fprintf(stderr, "Unable to load brightwheel token: %s\n", json_util_get_last_err());
-        return E_SETTINGS_ACCESS;
+        return E_JSON_ACCESS;
     }
     len = strlen(str);
 

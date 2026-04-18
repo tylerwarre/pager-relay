@@ -29,8 +29,7 @@ int main() {
 
     // TODO: implement a loop from here down until the free functions
     
-    // TODO: update so that bright_get_msgs() returns an int
-    if ((msgs = bright_get_msgs(s->brightwheel)) == NULL) {
+    if ((ret = bright_get_msgs(s->brightwheel, &msgs)) != E_SUCCESS) {
         return EXIT_FAILURE;
     }
 
