@@ -1,0 +1,86 @@
+# This starter workflow is for a CMake project running on a single platform. There is a different starter workflow if you need cross-platform coverage.
+# See: https://github.com/actions/starter-workflows/blob/main/ci/cmake-multi-platform.yml
+name: PR Checks
+
+on:
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+env:
+  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
+  CMAKE_PROFILE: release
+  VCPKG_ROOT: '${{ github.workspace }}/vcpkg'
+
+jobs:
+  build:
+    # The CMake configure and build commands are platform agnostic and should work equally well on Windows or Mac.
+    # You can convert this to a matrix build if you need cross-platform coverage.
+    # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    # Install latest CMake and Ninja.
+    - uses: lukka/get-cmake@latest
+
+    - name: Fetch VCPKG Dependancies
+      uses: lukka/run-vcpkg@v11
+      with:
+        vcpkgJsonGlob: 'vcpkg.json'
+        vcpkgConfigurationJsonGlob: 'vcpkg-configuration.json'
+
+    - name: CMake Configure
+      uses: lukka/run-cmake@v10
+      with:
+        vcpkgJsonGlob: 'vcpkg.json'
+        vcpkgDirectory: '${{ github.workspace }}/vcpkg'
+        # This is the name of the CMakePresets.json's configuration to use to generate
+        # the project files. This configuration leverages the vcpkg.cmake toolchain file to
+        # run vcpkg and install all dependencies specified in vcpkg.json.
+        configurePreset: 'vcpkg'
+
+        # This is the name of the CMakePresets.json's configuration to build the project.
+        #buildPreset: 'default'
+        # Additional arguments can be appended when building, for example to specify the
+        # configuration to build.
+        # This is useful to reduce the number of CMake's Presets you need in CMakePresets.json.
+        #buildPresetAdditionalArgs: "['--config Release']"
+
+    - name: Compile
+      run: |
+        cp config/settings.json.dist config/settings.json
+        cmake --build build/
+          
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: compiled-output  # Unique name for the artifact
+        path: |
+          build/pager-relay
+          build/settings.json
+        
+  memcheck:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Build
+        uses: actions/download-artifact@v4
+        with:
+          name: compiled-output  # Must match the name in Step 1
+          path: build/            # Where to place the downloaded files
+
+      - name: Install Valgrind
+        run: sudo apt-get update && sudo apt-get install -y valgrind
+
+      - name: Configure Settings
+        run: |
+          sed -i 's/"token": ""/"token": "${{ secrets.BRIGHTWHEEL_TOKEN }}"/' build/settings.json
+
+      - name: Update Permissions
+        run: chmod +x build/pager-relay
+
+      - name: Run Valgrind
+        working-directory: build/
+        run: ls -l && valgrind --leak-check=full --error-exitcode=1 ./pager-relay
+    
