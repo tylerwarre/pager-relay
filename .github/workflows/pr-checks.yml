@@ -28,6 +28,7 @@ jobs:
     - name: CMake Build
       uses: lukka/run-cmake@v10
       with:
+        vcpkgDirectory: '${{ github.workspace }}/'
         # This is the name of the CMakePresets.json's configuration to use to generate
         # the project files. This configuration leverages the vcpkg.cmake toolchain file to
         # run vcpkg and install all dependencies specified in vcpkg.json.
