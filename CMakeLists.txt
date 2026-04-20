@@ -29,11 +29,14 @@ add_custom_command(
         "${CMAKE_BINARY_DIR}/settings.json"
 )
 
+
 # Copy compile_commands.json to project root for neovim
-add_custom_command(
-    TARGET pager-relay
-    POST_BUILD
-    COMMAND "${CMAKE_COMMAND}" -E copy
-        "${CMAKE_BINARY_DIR}/compile_commands.json"
-        "${CMAKE_SOURCE_DIR}/compile_commands.json"
-)
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+    add_custom_command(
+        TARGET pager-relay
+        POST_BUILD
+        COMMAND "${CMAKE_COMMAND}" -E copy
+            "${CMAKE_BINARY_DIR}/compile_commands.json"
+            "${CMAKE_SOURCE_DIR}/compile_commands.json"
+    )
+endif()
