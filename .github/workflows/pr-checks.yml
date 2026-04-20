@@ -20,7 +20,7 @@ jobs:
 
     steps:
     # Install latest CMake and Ninja.
-    - uses: lukka/get-cmake@v3.28
+    - uses: lukka/get-cmake@latest
 
     - name: Fetch VCPKG Dependancies
       uses: lukka/run-vcpkg@v11
