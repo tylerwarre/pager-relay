@@ -19,22 +19,33 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+    # Install latest CMake and Ninja.
+    - uses: lukka/get-cmake@v3.28
 
-    - name: Configure CMake
-      # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
-      # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
-      run: cmake -B ${{github.workspace}}/build --preset ${{env.CMAKE_PROFILE}}
+    - name: Fetch VCPKG Dependancies
+      uses: lukka/run-vcpkg@v11
 
-    - name: Build
-      # Build your program with the given configuration
-      run: cmake --build ${{github.workspace}}/build
+    - name: CMake Build
+      uses: lukka/run-cmake@v10
+      with:
+        # This is the name of the CMakePresets.json's configuration to use to generate
+        # the project files. This configuration leverages the vcpkg.cmake toolchain file to
+        # run vcpkg and install all dependencies specified in vcpkg.json.
+        configurePreset: 'release'
 
+        # This is the name of the CMakePresets.json's configuration to build the project.
+        buildPreset: 'release'
+        # Additional arguments can be appended when building, for example to specify the
+        # configuration to build.
+        # This is useful to reduce the number of CMake's Presets you need in CMakePresets.json.
+        #buildPresetAdditionalArgs: "['--config Release']"
+          
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
         name: compiled-output  # Unique name for the artifact
         path: build/
+        
   memcheck:
     needs: build
     runs-on: ubuntu-latest
