@@ -6,6 +6,7 @@
 
 typedef struct BrightState {
     time_t lastTimestamp;
+    u_int8_t unread;
 } BrightState;
 
 typedef struct RelayState {
