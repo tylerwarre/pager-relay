@@ -41,6 +41,7 @@ int main() {
         return ret;
     }
 
+
     if ((ret = bright_get_last_msg(state->brightState, msgs, msg)) != E_SUCCESS) {
         return ret;
     }

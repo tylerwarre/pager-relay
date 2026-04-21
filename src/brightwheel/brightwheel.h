@@ -13,6 +13,6 @@ static const char TIMESTAMP_FMT[] = "%Y-%m-%dT%H:%M:%S";
 int bright_get_msgs(BrightwheelSettings *s, struct json_object **msgs);
 int bright_get_last_msg(BrightState *state, json_object *msgs, char *msg);
 static int bright_get_msg_count(BrightwheelSettings *s);
-static struct json_object* bright_parse_msgs(BrightwheelSettings *s, char *msgs);
+static struct json_object* bright_parse_msgs(BrightwheelSettings *s, char *j_str);
 
 #endif
