@@ -93,7 +93,14 @@ int bright_get_msgs(BrightwheelSettings *s, struct json_object **msgs) {
     return ret;
 }
 
-int bright_get_last_msg(BrightState *state, json_object *msgs, struct json_object **msg) {
+/** Gets the last unread message on brightwheel and
+ * the number of total unread messages
+ * @param [in] state The state of the Brighwheel plugin
+ * @param [in] msgs a json_object of json_type_array containing all messages
+ * @param [out] msg a json_object pointer that returns last unread message
+ * @returns an int representing the error code. E_SUCCESS is the only success code
+ */
+int bright_get_unread(BrightState *state, json_object *msgs, struct json_object **msg) {
     int len = 0;
     int ret = E_SUCCESS;
     struct json_object *j_next_msg = NULL;
@@ -105,7 +112,7 @@ int bright_get_last_msg(BrightState *state, json_object *msgs, struct json_objec
     }
 
     // TODO: Testing
-    state->lastTimestamp = 1776197160;
+    // state->lastTimestamp = 1776197160;
 
     for (int i = 0; i < len; i++) {
         if ((j_next_msg = json_object_array_get_idx(msgs, i)) == NULL) {
@@ -128,21 +135,25 @@ int bright_get_last_msg(BrightState *state, json_object *msgs, struct json_objec
             break;
         }
 
-        // Check if there are no new messages
+        // When there are no new messages
         if (state->lastTimestamp > timestamp && i == 0) {
             printf("No new message\n");
             break;
         }
+        // When there is a new message
         else if (timestamp > state->lastTimestamp)
         {
-            printf("New message!\n");
-            *msg = j_next_msg;
+            if ((*msg) == NULL) {
+                *msg = j_next_msg;
+            }
+            (state->unread)++;
             continue;
         }
+        // When we have exaused all unread messages
         else if ((*msg) != NULL) {
-            printf("%d is the first unread message index\n", i);
+            printf("There are %d unread messages\n", state->unread);
 
-            if ((timestamp = bright_get_timestamp(j_next_msg)) == 0) {
+            if ((timestamp = bright_get_timestamp(*msg)) == 0) {
                 fprintf(stderr, "[%s] Unable to get unread message timestamp at index: %d\n", __func__, i);
                 ret = E_JSON_PARSE;
                 break;
