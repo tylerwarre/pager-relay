@@ -1,0 +1,23 @@
+#!/bin/bash
+
+root_dir=$(git rev-parse --show-toplevel)
+branch_name=$(git symbolic-ref --short HEAD)
+COMMIT_MSG=$(cat $1)
+
+if [[ "$branch_name" == "dev" ]]; then
+	# Redirects all output to /dev/null
+	(cd "${root_dir}/build" && valgrind -q --leak-check=full --error-exitcode=1 ./pager-relay > /dev/null 2>&1 3>&2)
+
+	if [ ! -f "${root_dir}/build/pager-relay" ]; then
+	    echo -e "\n\n[Valgrind] error\n${COMMIT_MSG}" > $1
+	    exit 0
+	fi
+
+	if [ $? -eq 1 ]; then
+	    echo -e "\n\n[Valgrind] fail\n${COMMIT_MSG}" > $1
+	else
+	    echo -e "\n\n[Valgrind] pass\n${COMMIT_MSG}" > $1
+	fi
+fi
+
+exit 0
