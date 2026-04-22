@@ -9,6 +9,7 @@
 #include "brightwheel.h"
 #include "http.h"
 #include "error.h"
+#include "util.h"
 
 int bright_get_msgs(BrightwheelSettings *s, struct json_object **msgs) {
     CURL *curl = NULL;
@@ -70,8 +71,6 @@ int bright_get_msgs(BrightwheelSettings *s, struct json_object **msgs) {
             break;
         }
 
-        json_object_get(*msgs);
-
         break;
     }
 
@@ -85,8 +84,7 @@ int bright_get_msgs(BrightwheelSettings *s, struct json_object **msgs) {
         resp.data = NULL;
     }
 
-    json_object_object_del(j_reponse, "results");
-    json_object_put(j_reponse);
+    util_detach_json_child(j_reponse, "results", *msgs);
 
     curl_easy_cleanup(curl);
 
@@ -112,7 +110,8 @@ int bright_get_unread(BrightState *state, json_object *msgs, struct json_object 
     }
 
     // TODO: Testing
-    // state->lastTimestamp = 1776197160;
+    //state->lastTimestamp = 1776828186;
+    state->lastTimestamp = 1776197160;
 
     for (int i = 0; i < len; i++) {
         if ((j_next_msg = json_object_array_get_idx(msgs, i)) == NULL) {
@@ -150,19 +149,22 @@ int bright_get_unread(BrightState *state, json_object *msgs, struct json_object 
             continue;
         }
         // When we have exaused all unread messages
-        else if ((*msg) != NULL) {
-            printf("There are %d unread messages\n", state->unread);
-
-            if ((timestamp = bright_get_timestamp(*msg)) == 0) {
-                fprintf(stderr, "[%s] Unable to get unread message timestamp at index: %d\n", __func__, i);
-                ret = E_JSON_PARSE;
-                break;
-            }
-
-            state->lastTimestamp = timestamp;
-
+        else if ((*msg) != NULL || i == len) {
             break;
         }
+    }
+
+    if ((*msg) != NULL) {
+        printf("There are %d unread messages\n", state->unread);
+
+        if ((timestamp = bright_get_timestamp(*msg)) == 0) {
+            fprintf(stderr, "[%s] Unable to get unread message timestamp\n", __func__);
+            ret = E_JSON_PARSE;
+        }
+
+        state->lastTimestamp = timestamp;
+
+        util_detach_json_child_idx(msgs, 0, *msg);
     }
 
     return ret;
@@ -220,10 +222,9 @@ static time_t bright_get_timestamp(struct json_object *msg) {
             timestamp = 0;
             break;
         }
+
         break;
     }
-
-    //json_object_put(obj);
 
     return timestamp;
 }
