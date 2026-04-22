@@ -8,6 +8,7 @@
 #include "include/settings.h"
 #include "include/state.h"
 #include "brightwheel/brightwheel.h"
+#include "include/util.h"
 
 int main() {
     int ret = E_SUCCESS;
@@ -46,7 +47,9 @@ int main() {
         return ret;
     }
 
-    json_object_put(msgs);
+    json_object_put(msg);
+
+    //json_object_put(msgs);
 
     // TODO: End loop here
 
