@@ -11,7 +11,7 @@
 #include "error.h"
 #include "util.h"
 
-int bright_get_msgs(BrightwheelSettings *s, struct json_object **msgs) {
+int bright_get_msgs(BrightSettings *s, struct json_object **msgs) {
     CURL *curl = NULL;
     CURLcode ret = E_SUCCESS;
     HttpResponse resp = {0};
@@ -89,6 +89,20 @@ int bright_get_msgs(BrightwheelSettings *s, struct json_object **msgs) {
     curl_easy_cleanup(curl);
 
     return ret;
+}
+
+/** Evaluate whether a message should be read based on
+ * Brightwheel settings
+ * @param [in] s The parsed brighweel settings
+ * @param [in] msg The message being evaluated
+ * @param [out] do_read The result returned by reference. The passed in value
+ *  does not matter becase it is immediadly set to false
+ * @return an int representing the error code. E_SUCCESS on success
+ */
+int bright_evaluate_msg(BrightSettings *s, struct json_object *msg, bool *do_read) {
+    *do_read = false;
+
+    return E_SUCCESS;
 }
 
 /** Gets the last unread message on brightwheel and
@@ -170,7 +184,7 @@ int bright_get_unread(BrightState *state, json_object *msgs, struct json_object 
     return ret;
 }
 
-static struct json_object* bright_parse_msgs(BrightwheelSettings *s, char *j_str) {
+static struct json_object* bright_parse_msgs(BrightSettings *s, char *j_str) {
     struct json_object *obj = NULL;
 
     #ifndef NDEBUG

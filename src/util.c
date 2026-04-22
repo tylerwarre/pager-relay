@@ -1,5 +1,6 @@
 #include <stdbool.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "util.h"
 #include "error.h"
@@ -48,4 +49,45 @@ int util_print_json_str(struct json_object *parent, char *key) {
     json_object_put(obj);
 
     return ret;
+}
+
+int util_json_get_str(struct json_object *node, char *key, char **dest) {
+    const char *str = NULL;
+    int len = 0;
+    struct json_object *obj = NULL;
+
+    if(json_object_object_get_ex(node, key, &obj) == false) {
+        fprintf(stderr, "Unable to parse json string with key: %s\n", key);
+        return E_JSON_PARSE;
+    }
+
+    if((str = json_object_get_string(obj)) == NULL) {
+        fprintf(stderr, "Unable to access json string with key: %s\n", key);
+        return E_JSON_ACCESS;
+    }
+    len = strlen(str);
+
+    if ((*dest = calloc(len+1, 1)) == NULL) {
+        fprintf(stderr, "Ran out of memory when allocating json string with key: %s\n", key);
+        return E_OUTOFMEMORY;
+    }
+
+    strncpy(*dest, str, len);
+
+    return E_SUCCESS;
+}
+
+/** Gets the boolean value from the passed in object.
+ * On failure it always returns true
+ */
+int util_json_get_bool(struct json_object *node, char *key, bool *value) {
+    struct json_object *obj = NULL;
+    if(json_object_object_get_ex(node, key, &obj) == false) {
+        fprintf(stderr, "Unable to parse json bool with key: %s\n", key);
+        return E_JSON_PARSE;
+    }
+
+    *value = json_object_get_boolean(obj);
+
+    return E_SUCCESS;
 }
