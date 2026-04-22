@@ -15,7 +15,7 @@ int main() {
     RelaySettings *s = NULL;
     RelayState *state = NULL;
     struct json_object *msgs = NULL;
-    char *msg = NULL;
+    struct json_object *msg = NULL;
 
     if ((s = settings_new()) == NULL) {
         return E_OUTOFMEMORY;
@@ -42,7 +42,7 @@ int main() {
     }
 
 
-    if ((ret = bright_get_last_msg(state->brightState, msgs, msg)) != E_SUCCESS) {
+    if ((ret = bright_get_unread(state->brightState, msgs, &msg)) != E_SUCCESS) {
         return ret;
     }
 

@@ -93,14 +93,18 @@ int bright_get_msgs(BrightwheelSettings *s, struct json_object **msgs) {
     return ret;
 }
 
-int bright_get_last_msg(BrightState *state, json_object *msgs, char *msg) {
+/** Gets the last unread message on brightwheel and
+ * the number of total unread messages
+ * @param [in] state The state of the Brighwheel plugin
+ * @param [in] msgs a json_object of json_type_array containing all messages
+ * @param [out] msg a json_object pointer that returns last unread message
+ * @returns an int representing the error code. E_SUCCESS is the only success code
+ */
+int bright_get_unread(BrightState *state, json_object *msgs, struct json_object **msg) {
     int len = 0;
     int ret = E_SUCCESS;
-    struct json_object *j_msg = NULL;
-    struct json_object *j_obj = NULL;
-    struct tm tm = {0};
-    time_t timestamp;
-    const char *str = NULL;
+    struct json_object *j_next_msg = NULL;
+    time_t timestamp = 0;
 
     if((len = json_object_array_length(msgs)) < 1) {
         fprintf(stderr, "[%s] message array is empty\n", __func__);
@@ -108,61 +112,57 @@ int bright_get_last_msg(BrightState *state, json_object *msgs, char *msg) {
     }
 
     // TODO: Testing
-    //state->lastTimestamp = 1776222379;
+    // state->lastTimestamp = 1776197160;
 
-    // TODO: handle case when 1st message is newer, but last
     for (int i = 0; i < len; i++) {
-        if ((j_msg = json_object_array_get_idx(msgs, i)) == NULL) {
+        if ((j_next_msg = json_object_array_get_idx(msgs, i)) == NULL) {
             fprintf(stderr, "[%s] Unable to get message at index: %d\n", __func__, i);
             ret =  E_JSON_PARSE;
             break;
         }
 
         // Get "message" object
-        if (json_object_object_get_ex(j_msg, "message", &j_msg) == false) {
+        if (json_object_object_get_ex(j_next_msg, "message", &j_next_msg) == false) {
             fprintf(stderr, "[%s] Unable to get message data at index: %d\n", __func__, i);
             ret = E_JSON_PARSE;
             break;
         }
 
-        // Get message timestamp object
-        if (json_object_object_get_ex(j_msg, "created_at", &j_obj) == false) {
+        // Get timestamp
+        if ((timestamp = bright_get_timestamp(j_next_msg)) == 0) {
             fprintf(stderr, "[%s] Unable to get message timestamp at index: %d\n", __func__, i);
             ret = E_JSON_PARSE;
             break;
         }
 
-        if ((str = json_object_get_string(j_obj)) == NULL) {
-            fprintf(stderr, "[%s] Unable to access message timestamp string\n", __func__);
-            ret = E_JSON_ACCESS;
-            break;
-        }
-
-        if (strptime(str, TIMESTAMP_FMT, &tm) == NULL) {
-            fprintf(stderr, "[%s] Unable to convert timestamp string to time object\n", __func__);
-            ret = E_CONVERT;
-            break;
-        }
-
-        if ((timestamp = mktime(&tm)) == (time_t)-1) {
-            fprintf(stderr, "[%s] Unable to convert timestamp object\n", __func__);
-            ret = E_CONVERT;
-            break;
-        }
-
-        // Check if there are no new messages
+        // When there are no new messages
         if (state->lastTimestamp > timestamp && i == 0) {
             printf("No new message\n");
             break;
         }
-        // TODO: verify this works
-        // TODO: do something if we know we have a new message
+        // When there is a new message
         else if (timestamp > state->lastTimestamp)
         {
-            printf("New message!\n");
+            if ((*msg) == NULL) {
+                *msg = j_next_msg;
+            }
+            (state->unread)++;
+            continue;
+        }
+        // When we have exaused all unread messages
+        else if ((*msg) != NULL) {
+            printf("There are %d unread messages\n", state->unread);
+
+            if ((timestamp = bright_get_timestamp(*msg)) == 0) {
+                fprintf(stderr, "[%s] Unable to get unread message timestamp at index: %d\n", __func__, i);
+                ret = E_JSON_PARSE;
+                break;
+            }
+
+            state->lastTimestamp = timestamp;
+
             break;
         }
-        
     }
 
     return ret;
@@ -186,4 +186,44 @@ static struct json_object* bright_parse_msgs(BrightwheelSettings *s, char *j_str
     #endif
 
     return obj;
+}
+
+static time_t bright_get_timestamp(struct json_object *msg) {
+    struct tm tm = {0};
+    struct json_object *obj = NULL;
+    const char *str = NULL;
+    time_t timestamp = 0;
+
+    while (true)
+    {
+        // Get message timestamp object
+        if (json_object_object_get_ex(msg, "created_at", &obj) == false)
+        {
+            timestamp = 0;
+            break;
+        }
+
+        if ((str = json_object_get_string(obj)) == NULL)
+        {
+            timestamp = 0;
+            break;
+        }
+
+        if (strptime(str, TIMESTAMP_FMT, &tm) == NULL)
+        {
+            timestamp = 0;
+            break;
+        }
+
+        if ((timestamp = mktime(&tm)) == (time_t)-1)
+        {
+            timestamp = 0;
+            break;
+        }
+        break;
+    }
+
+    //json_object_put(obj);
+
+    return timestamp;
 }
