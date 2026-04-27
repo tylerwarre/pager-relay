@@ -47,6 +47,8 @@ int main() {
         return ret;
     }
 
+    util_re_findall("^tyler");
+
     json_object_put(msg);
 
     //json_object_put(msgs);

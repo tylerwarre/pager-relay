@@ -2,6 +2,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <pcre2.h>
+
 #include "util.h"
 #include "error.h"
 
@@ -90,4 +92,26 @@ int util_json_get_bool(struct json_object *node, char *key, bool *value) {
     *value = json_object_get_boolean(obj);
 
     return E_SUCCESS;
+}
+
+int util_re_findall(char *pattern) {
+    int len = 0;
+    int ret = E_SUCCESS;
+    PCRE2_SIZE error_offset;
+    pcre2_code *re = NULL;
+
+    if ((len = strlen(pattern)) == 0) {
+        fprintf(stderr, "Regex pattern is empty\n");
+        return E_EMPTY;
+    }
+
+    re = pcre2_compile((PCRE2_SPTR)pattern, len, 0, &ret, &error_offset, NULL);
+    if (re == NULL) {
+        // TODO implement printing PCRE2 error message
+        fprintf(stderr, "Unable to compile regex expression: %d\n", ret);
+    }
+
+    pcre2_code_free(re);
+
+    return ret;
 }
