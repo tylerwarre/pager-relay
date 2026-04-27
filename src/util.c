@@ -94,9 +94,10 @@ int util_json_get_bool(struct json_object *node, char *key, bool *value) {
     return E_SUCCESS;
 }
 
-int util_re_findall(char *pattern) {
+int util_re_match(char *pattern, PCRE2_SPTR *subj, pcre2_match_data_8 **matches) {
     int len = 0;
     int ret = E_SUCCESS;
+    PCRE2_UCHAR *err_msg;
     PCRE2_SIZE error_offset;
     pcre2_code *re = NULL;
 
@@ -105,12 +106,46 @@ int util_re_findall(char *pattern) {
         return E_EMPTY;
     }
 
-    re = pcre2_compile((PCRE2_SPTR)pattern, len, 0, &ret, &error_offset, NULL);
-    if (re == NULL) {
-        // TODO implement printing PCRE2 error message
-        fprintf(stderr, "Unable to compile regex expression: %d\n", ret);
+    if ((err_msg = calloc(120, 1)) == NULL) {
+        fprintf(stderr, "[%s] Out of memory hwne allocating space for error string\n", __func__);
+        return E_OUTOFMEMORY;
     }
 
+    re = pcre2_compile((PCRE2_SPTR)pattern, len, 0, &ret, &error_offset, NULL);
+    if (re == NULL) {
+        if (pcre2_get_error_message(ret, err_msg, 120) < 0) {
+            fprintf(stderr, "Unable to compile regex expression: %d\n", ret);
+        }
+        else {
+            fprintf(stderr, "Unable to compile regex expression: (%d) %s\n", ret, err_msg);
+        }
+        free(err_msg);
+        return ret;
+    }
+
+    while (true) {
+        if ((len = strlen(pattern)) == 0) {
+            fprintf(stderr, "Subject is empty\n");
+            ret = E_EMPTY;
+            break;
+        }
+
+        // If there is an error when matching. >1 indicates a match
+        if ((ret = pcre2_match(re, (PCRE2_SPTR)subj, len, 0, 0, *matches, NULL)) < 1) {
+            if (pcre2_get_error_message(ret, err_msg, 120) < 0) {
+                fprintf(stderr, "Error performing regex match: %d\n", ret);
+            }
+            else {
+                fprintf(stderr, "Error performing regex match: (%d) %s\n", ret, err_msg);
+            }
+            break;
+        }
+
+        ret = E_SUCCESS;
+        break;
+    }
+
+    free(err_msg);
     pcre2_code_free(re);
 
     return ret;
