@@ -1,6 +1,5 @@
 #include <json-c/json.h>
 #include <curl/curl.h>
-#include <pcre2.h>
 
 #include <stdio.h>
 #include <stdbool.h>
@@ -49,10 +48,10 @@ int main() {
     }
 
     // TODO: Testing
-    char *body;
-    pcre2_match_data_8 *matches;
-    util_json_get_str(msg, "body", &body);
-    util_re_match((PCRE2_SPTR)RE_PATTERN_UTF8, (PCRE2_SPTR)body, &matches);
+    char *body = NULL;
+    pcre2_match_data *matches;
+    util_json_get_str(msg, "body", &body, true);
+    util_re_match(RE_PATTERN_EMOJI, (PCRE2_SPTR)body, &matches);
     pcre2_match_data_free(matches);
     free(body);
     // TODO: End Testing
