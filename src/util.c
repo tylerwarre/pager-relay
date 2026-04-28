@@ -10,7 +10,7 @@ const char *RE_PATTERN_UTF8 = "[\\x00-\\x7F]|[\\xC2-\\xDF][\\x80-\\xBF]|\\xE0[\\
 // Smaple emoji regex (\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])
 const char *RE_PATTERN_EMOJI = "(\\xF0[\\x90-\\xBF][\\x80-\\xBF][\\x80-\\xBF])";
 // This is technically only the printable us-ascii characterset
-const char *RE_PATTERN_INVALID_USASCII = "[^\\x20-\\x7F]";
+const char *RE_PATTERN_INVALID_USASCII = "([^\\x20-\\x7F]+)";
 
 void util_detach_json_child_idx(struct json_object *parent, int child_index, struct json_object *child) {
     // Increment child object references
@@ -126,7 +126,7 @@ int util_re_match(const char *pattern, PCRE2_SPTR subj, pcre2_match_data **match
         return E_OUTOFMEMORY;
     }
 
-    re = pcre2_compile((PCRE2_SPTR)pattern, len, PCRE2_UTF, &ret, &error_offset, NULL);
+    re = pcre2_compile((PCRE2_SPTR)pattern, len, 0, &ret, &error_offset, NULL);
     if (re == NULL) {
         if (pcre2_get_error_message(ret, err_msg, 120) < 0) {
             fprintf(stderr, "Unable to compile regex expression: %d\n", ret);
@@ -162,25 +162,16 @@ int util_re_match(const char *pattern, PCRE2_SPTR subj, pcre2_match_data **match
             break;
         }
 
-        // TODO debug why it loops on first character
-        size_t offset = 0;
-        uint32_t options = PCRE2_UTF;
-        PCRE2_SIZE *ovector;
-        PCRE2_SIZE start;
-        PCRE2_SIZE end;
-        while (true)
-        {
-            if ((pcre2_next_match(*matches, &offset, &options)) == false) {
-                break;
-            }
-            pcre2_match(re, subj+offset, len, 0, 0, *matches, NULL);
-            ovector = pcre2_get_ovector_pointer(*matches);
+        char *m = calloc(100,1);
 
-            start = ovector[0];
-            end = ovector[1];
+        PCRE2_SIZE *ovector = pcre2_get_ovector_pointer(*matches);
 
-            printf("Match: %.*s\n", (int)(end-start), (subj+start));
-        }
+        PCRE2_SIZE start = ovector[0];
+        PCRE2_SIZE end = ovector[1];
+
+        memcpy(m, subj+start,(end-start));
+
+        printf("Match: %s\n", m);
 
         ret = E_SUCCESS;
         break;
