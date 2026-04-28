@@ -44,7 +44,7 @@ int main() {
     }
 
 
-    if ((ret = bright_get_unread(state->brightState, msgs, &msg)) != E_SUCCESS) {
+    if ((ret = bright_get_unread(state->brightState, s->brightwheel, msgs, &msg)) != E_SUCCESS) {
         return ret;
     }
 

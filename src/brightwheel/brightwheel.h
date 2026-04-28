@@ -11,7 +11,7 @@ static const char BRIGHT_API_URL[] = "https://schools.mybrightwheel.com/api/v2/g
 static const char TIMESTAMP_FMT[] = "%Y-%m-%dT%H:%M:%S";
 
 int bright_get_msgs(BrightSettings *s, struct json_object **msgs);
-int bright_get_unread(BrightState *state, json_object *msgs, struct json_object **msg);
+int bright_get_unread(BrightState *state, BrightSettings *s, json_object *msgs, struct json_object **msg);
 static int bright_get_msg_count(BrightSettings *s);
 static struct json_object* bright_parse_msgs(BrightSettings *s, char *j_str);
 static time_t bright_get_timestamp(struct json_object *obj);

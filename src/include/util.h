@@ -11,7 +11,7 @@ const char RE_PATTERN_INVALID_USASCII[] = "[^\x20-\x7F]";
 void util_detach_json_child(struct json_object *parent, char *key, struct json_object *child);
 void util_detach_json_child_idx(struct json_object *parent, int child_index, struct json_object *child);
 int util_print_json_str(struct json_object *parent, char *key);
-int util_json_get_str(struct json_object *obj, char *key, char **dest);
+int util_json_get_str(struct json_object *node, char *key, char **dest, bool allocate);
 int util_json_get_bool(struct json_object *node, char *key, bool *value);
 int util_re_match(char *pattern, PCRE2_SPTR *subj, pcre2_match_data_8 **matches);
 

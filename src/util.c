@@ -29,6 +29,7 @@ void util_detach_json_child(struct json_object *parent, char *key, struct json_o
     json_object_put(parent);
 }
 
+// TODO: Debug why this causes a memory leak
 int util_print_json_str(struct json_object *parent, char *key) {
     struct json_object *obj;
     const char *body;
@@ -53,9 +54,7 @@ int util_print_json_str(struct json_object *parent, char *key) {
     return ret;
 }
 
-int util_json_get_str(struct json_object *node, char *key, char **dest) {
-    const char *str = NULL;
-    int len = 0;
+int util_json_get_str(struct json_object *node, char *key, char **dest, bool allocate) {
     struct json_object *obj = NULL;
 
     if(json_object_object_get_ex(node, key, &obj) == false) {
@@ -63,18 +62,29 @@ int util_json_get_str(struct json_object *node, char *key, char **dest) {
         return E_JSON_PARSE;
     }
 
-    if((str = json_object_get_string(obj)) == NULL) {
-        fprintf(stderr, "Unable to access json string with key: %s\n", key);
-        return E_JSON_ACCESS;
-    }
-    len = strlen(str);
+    if (allocate) {
+        const char *str = NULL;
+        int len = 0;
 
-    if ((*dest = calloc(len+1, 1)) == NULL) {
-        fprintf(stderr, "Ran out of memory when allocating json string with key: %s\n", key);
-        return E_OUTOFMEMORY;
-    }
+        if((str = json_object_get_string(obj)) == NULL) {
+            fprintf(stderr, "Unable to access json string with key: %s\n", key);
+            return E_JSON_ACCESS;
+        }
+        len = strlen(str);
 
-    strncpy(*dest, str, len);
+        if ((*dest = calloc(len+1, 1)) == NULL) {
+            fprintf(stderr, "Ran out of memory when allocating json string with key: %s\n", key);
+            return E_OUTOFMEMORY;
+        }
+
+        strncpy(*dest, str, len);
+    }
+    else {
+        if((*dest = (char *)json_object_get_string(obj)) == NULL) {
+            fprintf(stderr, "Unable to access json string with key: %s\n", key);
+            return E_JSON_ACCESS;
+        }
+    }
 
     return E_SUCCESS;
 }

@@ -28,7 +28,7 @@ int settings_read(RelaySettings *s) {
             break;
         }
 
-        if ((ret = util_json_get_str(node, "token", &(s->brightwheel->token))) != E_SUCCESS) {
+        if ((ret = util_json_get_str(node, "token", &(s->brightwheel->token), true)) != E_SUCCESS) {
             break;
         }
 
