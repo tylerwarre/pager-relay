@@ -1,13 +1,14 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdint.h>
 
 #include "util.h"
 #include "error.h"
 
 const char *RE_PATTERN_UTF8 = "[\\x00-\\x7F]|[\\xC2-\\xDF][\\x80-\\xBF]|\\xE0[\\xA0-\\xBF][\\x80-\\xBF]|[\\xE1-\\xEC\\xEE\\xEF][\\x80-\\xBF]{2}|\\xED[\\x80-\\x9F][\\x80-\\xBF]|\\xF0[\\x90-\\xBF][\\x80-\\xBF]{2}|[\\xF1-\\xF3][\\x80-\\xBF]{3}|\\xF4[\\x80-\\x8F][\\x80-\\xBF]{2}";
 // Smaple emoji regex (\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])
-const char *RE_PATTERN_EMOJI = "\\X";
+const char *RE_PATTERN_EMOJI = "(\\xF0[\\x90-\\xBF][\\x80-\\xBF][\\x80-\\xBF])";
 // This is technically only the printable us-ascii characterset
 const char *RE_PATTERN_INVALID_USASCII = "[^\\x20-\\x7F]";
 
@@ -125,7 +126,7 @@ int util_re_match(const char *pattern, PCRE2_SPTR subj, pcre2_match_data **match
         return E_OUTOFMEMORY;
     }
 
-    re = pcre2_compile((PCRE2_SPTR)pattern, len, 0, &ret, &error_offset, NULL);
+    re = pcre2_compile((PCRE2_SPTR)pattern, len, PCRE2_UTF, &ret, &error_offset, NULL);
     if (re == NULL) {
         if (pcre2_get_error_message(ret, err_msg, 120) < 0) {
             fprintf(stderr, "Unable to compile regex expression: %d\n", ret);
@@ -159,6 +160,26 @@ int util_re_match(const char *pattern, PCRE2_SPTR subj, pcre2_match_data **match
                 fprintf(stderr, "Error performing regex match: (%d) %s\n", ret, err_msg);
             }
             break;
+        }
+
+        // TODO debug why it loops on first character
+        size_t offset = 0;
+        uint32_t options = PCRE2_UTF;
+        PCRE2_SIZE *ovector;
+        PCRE2_SIZE start;
+        PCRE2_SIZE end;
+        while (true)
+        {
+            if ((pcre2_next_match(*matches, &offset, &options)) == false) {
+                break;
+            }
+            pcre2_match(re, subj+offset, len, 0, 0, *matches, NULL);
+            ovector = pcre2_get_ovector_pointer(*matches);
+
+            start = ovector[0];
+            end = ovector[1];
+
+            printf("Match: %.*s\n", (int)(end-start), (subj+start));
         }
 
         ret = E_SUCCESS;

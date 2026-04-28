@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <stdbool.h>
+#include <string.h>
 
 #include "include/error.h"
 #include "include/settings.h"
@@ -51,7 +52,9 @@ int main() {
     char *body = NULL;
     pcre2_match_data *matches;
     util_json_get_str(msg, "body", &body, true);
-    util_re_match(RE_PATTERN_EMOJI, (PCRE2_SPTR)body, &matches);
+    printf("msg: %s\n", body);
+    util_re_match("\\X", (PCRE2_SPTR)body, &matches);
+
     pcre2_match_data_free(matches);
     free(body);
     // TODO: End Testing
