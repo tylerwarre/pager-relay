@@ -1,3 +1,19 @@
 #!/bin/bash
 
 git diff --cached --check
+# Check a specific file and exit with 1 if the newline is missing
+
+isModified=0
+for f in $(git ls-files); do
+    if [[ "$(tail -c1 $f)" ]]; then
+        isModified=1
+        echo >> $f
+        echo "Added newline to $f"
+    fi
+done
+
+if [ "$isModified" -eq 1 ]; then
+    exit 1
+else
+    exit 0
+fi

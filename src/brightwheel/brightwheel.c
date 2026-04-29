@@ -11,7 +11,7 @@
 #include "error.h"
 #include "util.h"
 
-int bright_get_msgs(BrightwheelSettings *s, struct json_object **msgs) {
+int bright_get_msgs(BrightSettings *s, struct json_object **msgs) {
     CURL *curl = NULL;
     CURLcode ret = E_SUCCESS;
     HttpResponse resp = {0};
@@ -91,6 +91,45 @@ int bright_get_msgs(BrightwheelSettings *s, struct json_object **msgs) {
     return ret;
 }
 
+/** Evaluate whether a message should be read based on
+ * Brightwheel settings
+ * @param [in] s The parsed brighweel settings
+ * @param [in] msg The message being evaluated
+ * @param [out] do_read The result returned by reference. The passed in value
+ *  does not matter becase it is immediadly set to false
+ * @return an int representing the error code. E_SUCCESS on success
+ */
+int bright_evaluate_msg(BrightSettings *s, struct json_object *msg, bool *do_read) {
+    *do_read = true;
+    char *str = NULL;
+    bool is_true = false;
+    int ret = E_SUCCESS;
+    struct json_object *obj;
+
+    if ((ret = util_json_get_bool(msg, "broadcast", &is_true)) != E_SUCCESS) {
+        return ret;
+    }
+    // When it is a broadcast message and we do not include them
+    if (is_true && !(s->includeBroadcasts)) {
+        *do_read = false;
+        return E_SUCCESS;
+    }
+
+    if ((json_object_object_get_ex(msg, "sender", &obj)) == false) {
+        return E_JSON_PARSE;
+    }
+    if ((ret = util_json_get_str(obj, "user_type", &str, false)) != E_SUCCESS) {
+        return ret;
+    }
+    // When it is a guardian message and we do not include them
+    if ((strcmp(str, "guardian") == 0) && !(s->includeGuardians)) {
+        *do_read = false;
+        return E_SUCCESS;
+    }
+
+    return E_SUCCESS;
+}
+
 /** Gets the last unread message on brightwheel and
  * the number of total unread messages
  * @param [in] state The state of the Brighwheel plugin
@@ -98,11 +137,12 @@ int bright_get_msgs(BrightwheelSettings *s, struct json_object **msgs) {
  * @param [out] msg a json_object pointer that returns last unread message
  * @returns an int representing the error code. E_SUCCESS is the only success code
  */
-int bright_get_unread(BrightState *state, json_object *msgs, struct json_object **msg) {
+int bright_get_unread(BrightState *state, BrightSettings *s, json_object *msgs, struct json_object **msg) {
     int len = 0;
     int ret = E_SUCCESS;
     struct json_object *j_next_msg = NULL;
     time_t timestamp = 0;
+    bool do_read = false;
 
     if((len = json_object_array_length(msgs)) < 1) {
         fprintf(stderr, "[%s] message array is empty\n", __func__);
@@ -110,8 +150,7 @@ int bright_get_unread(BrightState *state, json_object *msgs, struct json_object 
     }
 
     // TODO: Testing
-    //state->lastTimestamp = 1776828186;
-    state->lastTimestamp = 1776197160;
+    state->lastTimestamp = 1777002614;
 
     for (int i = 0; i < len; i++) {
         if ((j_next_msg = json_object_array_get_idx(msgs, i)) == NULL) {
@@ -142,10 +181,18 @@ int bright_get_unread(BrightState *state, json_object *msgs, struct json_object 
         // When there is a new message
         else if (timestamp > state->lastTimestamp)
         {
-            if ((*msg) == NULL) {
-                *msg = j_next_msg;
+            if ((bright_evaluate_msg(s, j_next_msg, &do_read)) != E_SUCCESS) {
+                // Skip message if we can't evaluate it
+                fprintf(stderr, "Unable to evaluate message at index: %d\n", i);
+                continue;
             }
-            (state->unread)++;
+
+            if (do_read) {
+                if ((*msg) == NULL) {
+                    *msg = j_next_msg;
+                }
+                (state->unread)++;
+            }
             continue;
         }
         // When we have exaused all unread messages
@@ -170,7 +217,7 @@ int bright_get_unread(BrightState *state, json_object *msgs, struct json_object 
     return ret;
 }
 
-static struct json_object* bright_parse_msgs(BrightwheelSettings *s, char *j_str) {
+static struct json_object* bright_parse_msgs(BrightSettings *s, char *j_str) {
     struct json_object *obj = NULL;
 
     #ifndef NDEBUG

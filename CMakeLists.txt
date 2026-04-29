@@ -20,6 +20,11 @@ target_include_directories(pager-relay PRIVATE ${CURL_INCLUDE_DIRS})
 find_package(json-c CONFIG REQUIRED)
 target_link_libraries(pager-relay PRIVATE json-c::json-c)
 
+# pcre2
+find_package(pcre2 CONFIG REQUIRED)
+target_compile_definitions(pager-relay PRIVATE PCRE2_CODE_UNIT_WIDTH=8)
+target_link_libraries(pager-relay PRIVATE PCRE2::POSIX PCRE2::8BIT)
+
 # Copy settings file to build output
 add_custom_command(
     TARGET pager-relay

@@ -6,7 +6,8 @@
 #define E_EMPTY             2
 #define E_JSON_PARSE        3
 #define E_JSON_ACCESS       4
-#define E_OUTOFMEMORY       5
-#define E_CONVERT           6
+#define E_RE_COMPILE        5
+#define E_OUTOFMEMORY       6
+#define E_CONVERT           7
 
 #endif

@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <stdbool.h>
+#include <string.h>
 
 #include "include/error.h"
 #include "include/settings.h"
@@ -43,15 +44,25 @@ int main() {
     }
 
 
-    if ((ret = bright_get_unread(state->brightState, msgs, &msg)) != E_SUCCESS) {
+    if ((ret = bright_get_unread(state->brightState, s->brightwheel, msgs, &msg)) != E_SUCCESS) {
         return ret;
     }
+
+    // TODO: Testing
+    char *body = NULL;
+    util_json_get_str(msg, "body", &body, true);
+    printf("msg: %s\n", body);
+    util_re_substitute(RE_PATTERN_INVALID_USASCII, body, '^', 0);
+
+    free(body);
+    // TODO: End Testing
 
     json_object_put(msg);
 
     //json_object_put(msgs);
 
     // TODO: End loop here
+
 
     // Free Relay objects
     settings_free(s);
