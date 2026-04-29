@@ -109,69 +109,62 @@ int util_json_get_bool(struct json_object *node, char *key, bool *value) {
     return E_SUCCESS;
 }
 
-int util_re_match(const char *pattern, char *subj, pcre2_match_data **matches) {
+int util_re_substitute(const char *pattern, char *subj, char c, uint32_t opt) {
     int len = 0;
     int ret = E_SUCCESS;
-    PCRE2_UCHAR *err_msg;
-    PCRE2_SIZE error_offset;
+    PCRE2_UCHAR *err_msg = NULL;
     pcre2_code *re = NULL;
+    pcre2_match_data *match = NULL;
 
-    if ((len = strlen(pattern)) == 0) {
-        fprintf(stderr, "Regex pattern is empty\n");
-        return E_EMPTY;
-    }
-
-    if ((err_msg = calloc(120, 1)) == NULL) {
-        fprintf(stderr, "[%s] Out of memory hwne allocating space for error string\n", __func__);
-        return E_OUTOFMEMORY;
-    }
-
-    re = pcre2_compile((PCRE2_SPTR)pattern, PCRE2_ZERO_TERMINATED, PCRE2_UCP | PCRE2_UTF, &ret, &error_offset, NULL);
-    if (re == NULL) {
-        if (pcre2_get_error_message(ret, err_msg, 120) < 0) {
-            fprintf(stderr, "Unable to compile regex expression: %d\n", ret);
-        }
-        else {
-            fprintf(stderr, "Unable to compile regex expression: (%d) %s\n", ret, err_msg);
-        }
-        free(err_msg);
-        return ret;
+    if ((re = util_re_compile(pattern, subj)) == NULL) {
+        return E_RE_COMPILE;
     }
 
     while (true) {
-        if ((len = strlen(subj)) == 0) {
+        if ((len = strlen(subj)) == 0)
+        {
             fprintf(stderr, "Subject is empty\n");
             ret = E_EMPTY;
             break;
         }
 
-        if ((*matches = pcre2_match_data_create_from_pattern(re, NULL)) == NULL) {
+        if ((err_msg = calloc(RE_ERR_LEN, 1)) == NULL) {
+            fprintf(stderr, "[%s] Out of memory when allocating space for error string\n", __func__);
+            break;
+        }
+
+        if ((match = pcre2_match_data_create_from_pattern(re, NULL)) == NULL)
+        {
             fprintf(stderr, "Error allocating memory for regex matches: %d\n", ret);
             ret = E_OUTOFMEMORY;
             break;
         }
 
         // If there is an error when matching. >1 indicates a match
-        if ((ret = pcre2_match(re, (PCRE2_SPTR)subj, len, 0, 0, *matches, NULL)) < 1) {
-            if (pcre2_get_error_message(ret, err_msg, 120) < 0) {
+        if ((ret = pcre2_match(re, (PCRE2_SPTR)subj, len, opt, 0, match, NULL)) < 1)
+        {
+            if (pcre2_get_error_message(ret, err_msg, 120) < 0)
+            {
                 fprintf(stderr, "Error performing regex match: %d\n", ret);
             }
-            else {
+            else
+            {
                 fprintf(stderr, "Error performing regex match: (%d) %s\n", ret, err_msg);
             }
             break;
         }
 
-        char *m = calloc(100,1);
+        char *m = calloc(100, 1);
 
-        PCRE2_SIZE *ovector = pcre2_get_ovector_pointer(*matches);
+        PCRE2_SIZE *ovector = pcre2_get_ovector_pointer(match);
 
         PCRE2_SIZE start = ovector[0];
         PCRE2_SIZE end = ovector[1];
 
-        memcpy(m, subj+start,(end-start));
+        memcpy(m, subj + start, (end - start));
 
         printf("Match: %s\n", m);
+        free(m);
 
         ret = E_SUCCESS;
         break;
@@ -179,10 +172,44 @@ int util_re_match(const char *pattern, char *subj, pcre2_match_data **matches) {
 
     free(err_msg);
     pcre2_code_free(re);
-
-    if (ret != E_SUCCESS) {
-        pcre2_match_data_free(*matches);
-    }
+    pcre2_match_data_free(match);
 
     return ret;
+}
+
+static pcre2_code* util_re_compile(const char *pattern, char *subj) {
+    int len = 0;
+    int ret = E_SUCCESS;
+    PCRE2_UCHAR *err_msg = NULL;
+    PCRE2_SIZE error_offset = 0;
+    pcre2_code *re = NULL;
+
+    while (true) {
+        if ((len = strlen(pattern)) == 0) {
+            fprintf(stderr, "Regex pattern is empty\n");
+            break;
+        }
+
+        if ((err_msg = calloc(RE_ERR_LEN, 1)) == NULL) {
+            fprintf(stderr, "[%s] Out of memory when allocating space for error string\n", __func__);
+            break;
+        }
+
+        re = pcre2_compile((PCRE2_SPTR)pattern, len, 0, &ret, &error_offset, NULL);
+        if (re == NULL) {
+            if (pcre2_get_error_message(ret, err_msg, RE_ERR_LEN) < 0) {
+                fprintf(stderr, "Unable to compile regex expression: %d\n", ret);
+            }
+            else {
+                fprintf(stderr, "Unable to compile regex expression: (%d) %s\n", ret, err_msg);
+            }
+            break;
+        }
+
+        break;
+    }
+
+    free(err_msg);
+
+    return re;
 }
