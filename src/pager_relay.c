@@ -52,7 +52,9 @@ int main() {
     char *body = NULL;
     util_json_get_str(msg, "body", &body, true);
     printf("msg: %s\n", body);
-    util_re_substitute(RE_PATTERN_INVALID_USASCII, body, '^', 0);
+    //char *body = "Just a reminder that the \"Thank Your Teacher 🍎\" survey closes tomorrow night. 4/28/26 at 11:59PM. 😊 let's show these teachers some appreciation";
+
+    util_re_substitute(RE_PATTERN_INVALID_USASCII, &body, '^', PCRE2_NOTEMPTY);
 
     free(body);
     // TODO: End Testing

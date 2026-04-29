@@ -25,6 +25,11 @@
                     "description": "Set Disassembly Flavor to Intel",
                     "text": "-gdb-set disassembly-flavor intel",
                     "ignoreFailures": true
+                },
+                {
+                    "description": "Disable debug info download",
+                    "text": "set debuginfod enabled off",
+                    "ignoreFailures": true
                 }
             ]
         }
