@@ -114,6 +114,8 @@ int util_re_substitute(const char *pattern, char **subj, char c, uint32_t opt) {
     int ret = E_SUCCESS;
     PCRE2_SIZE offset = 0;
     PCRE2_UCHAR err_msg[RE_ERR_LEN];
+    PCRE2_SIZE *ovector = NULL;
+    PCRE2_SIZE end = 0;
     pcre2_code *re = NULL;
     pcre2_match_data *match = NULL;
     char *m = NULL;
@@ -155,25 +157,42 @@ int util_re_substitute(const char *pattern, char **subj, char c, uint32_t opt) {
             break;
         }
 
-        m = calloc(len+1, 1);
+        ovector = pcre2_get_ovector_pointer(match);
+        util_re_sub_match(*subj+offset, ovector, &offset, c);
 
-        PCRE2_SIZE *ovector = pcre2_get_ovector_pointer(match);
 
-        PCRE2_SIZE start = ovector[0];
-        PCRE2_SIZE end = ovector[1];
-
-        memcpy(m, (*subj+offset) + start, (end - start));
-
-        printf("Match: %s\n", m);
-        free(m);
-
-        offset += end;
+        end = ovector[1];
+        offset += end+1;
     }
 
     pcre2_code_free(re);
     pcre2_match_data_free(match);
 
     return ret;
+}
+
+static void util_re_sub_match(char *ptr, PCRE2_SIZE *ovector, PCRE2_SIZE *offset, char c) {
+    int len = 0;
+    char *m = NULL;
+    PCRE2_SIZE start = 0;
+    PCRE2_SIZE end = 0;
+
+    if ((len = strlen(ptr)) == 0) {
+        return;
+    }
+
+    start = ovector[0];
+    end = ovector[1];
+
+    ptr[start] = c;
+    // length of shortened string is found with (len+1)-((end-start)+start).
+    // This is computed by first getting the passed in string length and adding
+    // 1 to include the null terminator. Then we subtract the length of the match
+    // add the start offset
+    memmove(&ptr[start+1], &ptr[end], (len+1)-((end-start)+start));
+
+    *offset -= (end-start);
+    return;
 }
 
 static pcre2_code* util_re_compile(const char *pattern, char *subj, uint32_t opt) {
