@@ -109,7 +109,7 @@ int util_json_get_bool(struct json_object *node, char *key, bool *value) {
     return E_SUCCESS;
 }
 
-int util_re_match(const char *pattern, PCRE2_SPTR subj, pcre2_match_data **matches) {
+int util_re_match(const char *pattern, char *subj, pcre2_match_data **matches) {
     int len = 0;
     int ret = E_SUCCESS;
     PCRE2_UCHAR *err_msg;
@@ -126,7 +126,7 @@ int util_re_match(const char *pattern, PCRE2_SPTR subj, pcre2_match_data **match
         return E_OUTOFMEMORY;
     }
 
-    re = pcre2_compile((PCRE2_SPTR)pattern, len, 0, &ret, &error_offset, NULL);
+    re = pcre2_compile((PCRE2_SPTR)pattern, PCRE2_ZERO_TERMINATED, PCRE2_UCP | PCRE2_UTF, &ret, &error_offset, NULL);
     if (re == NULL) {
         if (pcre2_get_error_message(ret, err_msg, 120) < 0) {
             fprintf(stderr, "Unable to compile regex expression: %d\n", ret);
@@ -139,7 +139,7 @@ int util_re_match(const char *pattern, PCRE2_SPTR subj, pcre2_match_data **match
     }
 
     while (true) {
-        if ((len = strlen(pattern)) == 0) {
+        if ((len = strlen(subj)) == 0) {
             fprintf(stderr, "Subject is empty\n");
             ret = E_EMPTY;
             break;
@@ -152,7 +152,7 @@ int util_re_match(const char *pattern, PCRE2_SPTR subj, pcre2_match_data **match
         }
 
         // If there is an error when matching. >1 indicates a match
-        if ((ret = pcre2_match(re, subj, len, 0, 0, *matches, NULL)) < 1) {
+        if ((ret = pcre2_match(re, (PCRE2_SPTR)subj, len, 0, 0, *matches, NULL)) < 1) {
             if (pcre2_get_error_message(ret, err_msg, 120) < 0) {
                 fprintf(stderr, "Error performing regex match: %d\n", ret);
             }

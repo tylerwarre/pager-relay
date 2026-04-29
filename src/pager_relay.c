@@ -53,7 +53,7 @@ int main() {
     pcre2_match_data *matches;
     util_json_get_str(msg, "body", &body, true);
     printf("msg: %s\n", body);
-    util_re_match(RE_PATTERN_INVALID_USASCII, (PCRE2_SPTR)"Just a reminder that the \"Thank Your Teacher\" survey closes tomorow night. 4/28/26 at 11:59PM. 😊 let's shwo these teachers some appreciation", &matches);
+    util_re_match(RE_PATTERN_INVALID_USASCII, "Just a reminder that the \"Thank Your Teacher\" survey closes tomorow night. 4/28/26 at 11:59PM. 😊 let's shwo these teachers some appreciation", &matches);
 
     pcre2_match_data_free(matches);
     free(body);
