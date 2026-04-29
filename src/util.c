@@ -112,7 +112,7 @@ int util_json_get_bool(struct json_object *node, char *key, bool *value) {
 int util_re_substitute(const char *pattern, char *subj, char c, uint32_t opt) {
     int len = 0;
     int ret = E_SUCCESS;
-    PCRE2_UCHAR *err_msg = NULL;
+    PCRE2_UCHAR err_msg[RE_ERR_LEN];
     pcre2_code *re = NULL;
     pcre2_match_data *match = NULL;
 
@@ -125,11 +125,6 @@ int util_re_substitute(const char *pattern, char *subj, char c, uint32_t opt) {
         {
             fprintf(stderr, "Subject is empty\n");
             ret = E_EMPTY;
-            break;
-        }
-
-        if ((err_msg = calloc(RE_ERR_LEN, 1)) == NULL) {
-            fprintf(stderr, "[%s] Out of memory when allocating space for error string\n", __func__);
             break;
         }
 
@@ -170,7 +165,6 @@ int util_re_substitute(const char *pattern, char *subj, char c, uint32_t opt) {
         break;
     }
 
-    free(err_msg);
     pcre2_code_free(re);
     pcre2_match_data_free(match);
 
@@ -180,36 +174,25 @@ int util_re_substitute(const char *pattern, char *subj, char c, uint32_t opt) {
 static pcre2_code* util_re_compile(const char *pattern, char *subj) {
     int len = 0;
     int ret = E_SUCCESS;
-    PCRE2_UCHAR *err_msg = NULL;
+    PCRE2_UCHAR err_msg[RE_ERR_LEN];
     PCRE2_SIZE error_offset = 0;
     pcre2_code *re = NULL;
 
-    while (true) {
-        if ((len = strlen(pattern)) == 0) {
-            fprintf(stderr, "Regex pattern is empty\n");
-            break;
-        }
-
-        if ((err_msg = calloc(RE_ERR_LEN, 1)) == NULL) {
-            fprintf(stderr, "[%s] Out of memory when allocating space for error string\n", __func__);
-            break;
-        }
-
-        re = pcre2_compile((PCRE2_SPTR)pattern, len, 0, &ret, &error_offset, NULL);
-        if (re == NULL) {
-            if (pcre2_get_error_message(ret, err_msg, RE_ERR_LEN) < 0) {
-                fprintf(stderr, "Unable to compile regex expression: %d\n", ret);
-            }
-            else {
-                fprintf(stderr, "Unable to compile regex expression: (%d) %s\n", ret, err_msg);
-            }
-            break;
-        }
-
-        break;
+    if ((len = strlen(pattern)) == 0) {
+        fprintf(stderr, "Regex pattern is empty\n");
+        return NULL;
     }
 
-    free(err_msg);
+    re = pcre2_compile((PCRE2_SPTR)pattern, len, 0, &ret, &error_offset, NULL);
+    if (re == NULL) {
+        if (pcre2_get_error_message(ret, err_msg, RE_ERR_LEN) < 0) {
+            fprintf(stderr, "Unable to compile regex expression: %d\n", ret);
+        }
+        else {
+            fprintf(stderr, "Unable to compile regex expression: (%d) %s\n", ret, err_msg);
+        }
+        return NULL;
+    }
 
     return re;
 }
