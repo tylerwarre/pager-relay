@@ -165,6 +165,9 @@ int util_re_substitute(const char *pattern, char **subj, char c, uint32_t opt) {
         offset += end+1;
     }
 
+    len = strlen(*subj);
+    *subj = realloc(*subj, len+1);
+
     pcre2_code_free(re);
     pcre2_match_data_free(match);
 

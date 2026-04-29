@@ -51,8 +51,8 @@ int main() {
     // TODO: Testing
     char *body = NULL;
     util_json_get_str(msg, "body", &body, true);
-    printf("msg: %s\n", body);
-    //char *body = "Just a reminder that the \"Thank Your Teacher 🍎\" survey closes tomorrow night. 4/28/26 at 11:59PM. 😊 let's show these teachers some appreciation";
+    //char *body = calloc(160,1);
+    //strcpy(body, "Just a reminder that the \"Thank Your Teacher 🍎\" survey closes tomorrow night. 4/28/26 at 11:59PM. 😊 let's show these teachers some appreciation");
 
     util_re_substitute(RE_PATTERN_INVALID_USASCII, &body, '^', PCRE2_NOTEMPTY);
 
