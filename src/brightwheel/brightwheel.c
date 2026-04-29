@@ -10,6 +10,7 @@
 #include "http.h"
 #include "error.h"
 #include "util.h"
+#include "email.h"
 
 int bright_get_msgs(BrightSettings *s, struct json_object **msgs) {
     CURL *curl = NULL;
@@ -215,6 +216,55 @@ int bright_get_unread(BrightState *state, BrightSettings *s, json_object *msgs, 
     }
 
     return ret;
+}
+
+// Built in assumption that less than 10 messages can possibly be unread
+//  based on API call
+int bright_truncate_msgs(uint8_t unread, char **msg) {
+    int len = 0;
+    int len_suffix = 9;
+    int delta = 0;
+    char suffix[] = "..+0 Msgs";
+    if ((len = strlen(*msg)) < 1) {
+        fprintf(stderr, "[%s] message is empty\n", __func__);
+        return E_EMPTY;
+    }
+
+    // If there is more than 1 unread message
+    if (unread > 1) {
+        // Fill in the number of additional unread messages
+        suffix[3] = unread-1;
+
+        delta = EMAIL_MAX_LEN - (len+len_suffix);
+    }
+    else {
+        delta = EMAIL_MAX_LEN - len;
+    }
+
+    // If we are larger than the max length truncate
+    if (delta < 0) {
+        *msg = realloc(*msg,EMAIL_MAX_LEN+1);
+    }
+    // If we are smaller than the max length and have more than one unread message
+    //  we need to allocate more space for the suffix
+    else if (unread > 1) {
+        *msg = realloc(*msg,len+len_suffix+1);
+    }
+
+    // If we have multiple unread messages and we are the maximum length
+    //  we need to write over the end of our string with the suffix
+    if (unread > 1 && delta < 0) {
+        memmove(*msg+(len-len_suffix), suffix, len_suffix);
+        *msg[EMAIL_MAX_LEN] = '\0';
+    }
+    // If we have multiple unread messages and we had extra space
+    //  just append the suffix
+    else if (unread > 1) {
+        memmove(*msg+len, suffix, len_suffix);
+        *msg[len+len_suffix] = '\0';
+    }
+
+    return E_SUCCESS;
 }
 
 static struct json_object* bright_parse_msgs(BrightSettings *s, char *j_str) {

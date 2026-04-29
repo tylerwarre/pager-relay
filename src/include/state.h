@@ -3,6 +3,7 @@
 
 #define __USE_XOPEN // Required for strptime
 #include <time.h>
+#include <stdint.h>
 
 typedef struct BrightState {
     time_t lastTimestamp;
