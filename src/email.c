@@ -35,7 +35,7 @@ int email_send(EmailSettings *s, char *body, EmailType type) {
     CURL *curl = NULL;
     CURLcode ret = CURLE_OK;
     struct curl_slist *recipients = NULL;
-    EmailCtx *upload_ctx = { 0 };
+    EmailCtx upload_ctx = { 0 };
 
     // TODO: Testing Start
     char username[255];
@@ -57,7 +57,10 @@ int email_send(EmailSettings *s, char *body, EmailType type) {
     strftime(date, sizeof(date), "%a, %d %b %Y %T %z", tmp);
 
     sprintf(msg, EMAIL_FMT, "tyler@warrens.one", username, date, "Brightwheel Relay", body);
-    msg = realloc(msg, strlen(msg));
+    //msg = realloc(msg, strlen(msg+1));
+    msg[367] = '\0';
+
+    upload_ctx.msg = msg;
     // TODO: Testing End
 
     while (true) {
@@ -71,7 +74,6 @@ int email_send(EmailSettings *s, char *body, EmailType type) {
         curl_easy_setopt(curl, CURLOPT_USE_SSL, 1L);
         curl_easy_setopt(curl, CURLOPT_URL, "smtps://mail.warrens.one");
         curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
-        curl_easy_setopt(curl, CURLOPT_QUOTE, NULL);
 
         // TODO get from settings
         // Specify credentials
