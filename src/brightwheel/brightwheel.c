@@ -222,9 +222,9 @@ int bright_get_unread(BrightState *state, BrightSettings *s, json_object *msgs, 
 //  based on API call
 int bright_truncate_msgs(uint8_t unread, char **msg) {
     int len = 0;
-    int len_suffix = 9;
+    int len_suffix = 8;
     int delta = 0;
-    char suffix[] = "..+0 Msgs";
+    char suffix[] = "..+0 Msg";
     if ((len = strlen(*msg)) < 1) {
         fprintf(stderr, "[%s] message is empty\n", __func__);
         return E_EMPTY;
@@ -238,6 +238,16 @@ int bright_truncate_msgs(uint8_t unread, char **msg) {
             *msg = realloc(*msg, EMAIL_MAX_LEN+1);
             // Null terminate the truncated string
             (*msg)[EMAIL_MAX_LEN] = '\0';
+        }
+    }
+    // TODO: Ensure there is no way to have unread < 1
+    else {
+        // If our current message is smaller than the max size the pager will accept
+        //  and it can fit the suffix
+        if (delta >= strlen(suffix)) {
+            *msg = realloc(*msg, len+len_suffix+1);
+            suffix[3] = (char)((unread-1) + '0');
+            *msg = strcat(*msg, suffix);
         }
     }
 
