@@ -242,12 +242,27 @@ int bright_truncate_msgs(uint8_t unread, char **msg) {
     }
     // TODO: Ensure there is no way to have unread < 1
     else {
+        suffix[3] = (char)((unread-1) + '0');
         // If our current message is smaller than the max size the pager will accept
         //  and it can fit the suffix
-        if (delta >= strlen(suffix)) {
-            *msg = realloc(*msg, len+len_suffix+1);
-            suffix[3] = (char)((unread-1) + '0');
+        if (delta >= len_suffix) {
+            if ((*msg = realloc(*msg, len+len_suffix+1)) == NULL) {
+                fprintf(stderr, "[%s] out of memory to resize message length\n", __func__);
+                return E_OUTOFMEMORY;
+            }
+            // TODO: replace with function with better error handling
             *msg = strcat(*msg, suffix);
+        }
+        // If our current message is greater than or equal to the max size the page will
+        // accept
+        else if (delta < 0) {
+            if ((*msg = realloc(*msg, EMAIL_MAX_LEN+1)) == NULL) {
+                fprintf(stderr, "[%s] out of memory to resize message length\n", __func__);
+                return E_OUTOFMEMORY;
+            }
+            // NUll terminate the truncated string
+            (*msg)[EMAIL_MAX_LEN] = '\0';
+            memmove(*msg+(EMAIL_MAX_LEN-len_suffix), suffix, len_suffix);
         }
     }
 
