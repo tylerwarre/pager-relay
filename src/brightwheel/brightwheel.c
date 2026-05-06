@@ -262,6 +262,7 @@ int bright_truncate_msgs(uint8_t unread, char **msg) {
             }
             // NUll terminate the truncated string
             (*msg)[EMAIL_MAX_LEN] = '\0';
+            // Place the suffix at the end of the string offset by the length of the suffix
             memmove(*msg+(EMAIL_MAX_LEN-len_suffix), suffix, len_suffix);
         }
     }

@@ -13,6 +13,7 @@ typedef struct EmailSettings {
     char *sender;
     char *receipients;
     char *password;
+    int throttle;
 } EmailSettings;
 
 typedef struct RelaySettings {

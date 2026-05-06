@@ -109,6 +109,66 @@ int util_json_get_bool(struct json_object *node, char *key, bool *value) {
     return E_SUCCESS;
 }
 
+int util_json_get_int(struct json_object *node, char *key, int *value) {
+    struct json_object *obj = NULL;
+    if(json_object_object_get_ex(node, key, &obj) == false) {
+        fprintf(stderr, "Unable to parse json int with key: %s\n", key);
+        return E_JSON_PARSE;
+    }
+
+    *value = json_object_get_int(obj);
+
+    if (*value == 0 || *value == INT_MAX || *value == INT_MIN) {
+        fprintf(stderr, "Invlaid integer being parsed: %s\n", key);
+        return E_JSON_PARSE;
+    }
+
+    return E_SUCCESS;
+}
+
+int util_json_get_array(struct json_object *node, char *key, char **dest, void **array) {
+    int len = 0;
+    int str_len = 0;
+    struct json_object *obj = NULL;
+    const char *str = NULL;
+
+    if(json_object_object_get_ex(node, key, &node) == false) {
+        fprintf(stderr, "Unable to parse json array with key: %s\n", key);
+        return E_JSON_PARSE;
+    }
+
+    if((len = json_object_array_length(node)) < 1) {
+        fprintf(stderr, "[%s] array is empty for key %s\n", key, __func__);
+        return E_EMPTY;
+    }
+
+    if ((*array = calloc(len, sizeof(void *))) == NULL) {
+        fprintf(stderr, "[%s] Unable to allocate memory for array\n", __func__);
+        return E_OUTOFMEMORY;
+    }
+
+    for (int i = 0; i < len; i++) {
+        if ((obj = json_object_array_get_idx(node, i)) == NULL) {
+            fprintf(stderr, "[%s] Unable to get obj at index: %d\n", __func__, i);
+            return E_JSON_PARSE;
+        }
+
+        if((str = json_object_get_string(obj)) == NULL) {
+            fprintf(stderr, "Unable to access json string with key: %s\n", key);
+            return E_JSON_ACCESS;
+        }
+        len = strlen(str);
+
+        if ((*dest = calloc(len+1, 1)) == NULL) {
+            fprintf(stderr, "Ran out of memory when allocating json string with key: %s\n", key);
+            return E_OUTOFMEMORY;
+        }
+
+        strncpy(*dest, str, len);
+    }
+
+}
+
 int util_re_substitute(const char *pattern, char **subj, char c, uint32_t opt) {
     int len = 0;
     int ret = E_SUCCESS;

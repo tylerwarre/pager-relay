@@ -38,35 +38,20 @@ int main() {
     }
 
     // TODO: implement a loop from here down until the free functions
-    
-    if ((ret = bright_get_msgs(s->brightwheel, &msgs)) != E_SUCCESS) {
-        return ret;
+    while (true) {
+        if ((ret = bright_get_msgs(s->brightwheel, &msgs)) != E_SUCCESS) {
+            return ret;
+        }
+
+        if ((ret = bright_get_unread(state->brightState, s->brightwheel, msgs, &msg)) != E_SUCCESS) {
+            return ret;
+        }
+
+        util_re_substitute(RE_PATTERN_INVALID_USASCII, msg, '^', PCRE2_NOTEMPTY);
+        bright_truncate_msgs(state->brightState->unread, &msg);
+
+        json_object_put(msg);
     }
-
-
-    if ((ret = bright_get_unread(state->brightState, s->brightwheel, msgs, &msg)) != E_SUCCESS) {
-        return ret;
-    }
-
-    // TODO: Testing
-    //char *body = NULL;
-    //util_json_get_str(msg, "body", &body, true);
-    char *body = calloc(550,1);
-    strcpy(body, "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
-
-    util_re_substitute(RE_PATTERN_INVALID_USASCII, &body, '^', PCRE2_NOTEMPTY);
-    bright_truncate_msgs(2, &body);
-    printf("%s\n", body);
-
-    free(body);
-    // TODO: End Testing
-
-    json_object_put(msg);
-
-    //json_object_put(msgs);
-
-    // TODO: End loop here
-
 
     // Free Relay objects
     settings_free(s);

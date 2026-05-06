@@ -22,6 +22,7 @@ int settings_read(RelaySettings *s) {
             break;
         }
 
+        // Brightwheel Settings
         if(json_object_object_get_ex(root, "brightwheel", &node) == false) {
             fprintf(stderr, "Unable to load brightwheel settings: %s\n", json_util_get_last_err());
             ret =  E_JSON_PARSE;
@@ -40,16 +41,29 @@ int settings_read(RelaySettings *s) {
             break;
         }
 
-        if(json_object_object_get_ex(node, "token", &obj) == false) {
-            fprintf(stderr, "Unable to load brightwheel token: %s\n", json_util_get_last_err());
+        // Email Settings
+        if(json_object_object_get_ex(root, "email", &node) == false) {
+            fprintf(stderr, "Unable to load email settings: %s\n", json_util_get_last_err());
             ret =  E_JSON_PARSE;
             break;
         }
 
+        if ((ret = util_json_get_str(node, "sender", &(s->email->sender), true)) != E_SUCCESS) {
+            break;
+        }
+
+        if ((ret = util_json_get_str(node, "password", &(s->email->password), true)) != E_SUCCESS) {
+            break;
+        }
+
+        if ((ret = util_json_get_int(node, "throttle", &(s->email->throttle))) != E_SUCCESS) {
+            break;
+        }
+
+
         if ((ret = settings_validate(s)) != E_SUCCESS) {
             break;
         }
-        // TODO: implement email settings
         break;
     }
 
