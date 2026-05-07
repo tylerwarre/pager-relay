@@ -60,6 +60,9 @@ int settings_read(RelaySettings *s) {
             break;
         }
 
+        if ((ret = util_json_get_array(node, "receipients", &(s->email->receipients))) != E_SUCCESS) {
+            break;
+        }
 
         if ((ret = settings_validate(s)) != E_SUCCESS) {
             break;
@@ -130,17 +133,23 @@ static void settings_email_free(EmailSettings *s) {
         s->sender = NULL;
     }
 
-    if (s->receipients != NULL) {
-        free(s->receipients);
-        s->receipients = NULL;
-    }
-
     if (s->password != NULL) {
         free(s->password);
         s->password = NULL;
     }
 
-    // TODO: implement email free
+    // Free entires in receipients array
+    for (int i = 0; i < (sizeof(s->receipients)/sizeof(char*)); i++) {
+        if ((s->receipients)[i] != NULL) {
+            free((s->receipients)[i]);
+            (s->receipients)[i] = NULL;
+        }
+    }
+    if (s->receipients != NULL) {
+        free(s->receipients);
+        s->receipients = NULL;
+    }
+
     if (s != NULL) {
         free(s);
         s = NULL;

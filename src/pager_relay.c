@@ -17,7 +17,7 @@ int main() {
     RelaySettings *s = NULL;
     RelayState *state = NULL;
     struct json_object *msgs = NULL;
-    struct json_object *msg = NULL;
+    char *msg = NULL;
 
     if ((s = settings_new()) == NULL) {
         return E_OUTOFMEMORY;
@@ -47,10 +47,16 @@ int main() {
             return ret;
         }
 
-        util_re_substitute(RE_PATTERN_INVALID_USASCII, msg, '^', PCRE2_NOTEMPTY);
+        util_re_substitute(RE_PATTERN_INVALID_USASCII, &msg, '^', PCRE2_NOTEMPTY);
         bright_truncate_msgs(state->brightState->unread, &msg);
 
-        json_object_put(msg);
+        if (msg != NULL) {
+            free(msg);
+            msg = NULL;
+        }
+
+        // TODO: Testing
+        break;
     }
 
     // Free Relay objects

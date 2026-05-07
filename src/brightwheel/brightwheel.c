@@ -138,10 +138,11 @@ int bright_evaluate_msg(BrightSettings *s, struct json_object *msg, bool *do_rea
  * @param [out] msg a json_object pointer that returns last unread message
  * @returns an int representing the error code. E_SUCCESS is the only success code
  */
-int bright_get_unread(BrightState *state, BrightSettings *s, json_object *msgs, struct json_object **msg) {
+int bright_get_unread(BrightState *state, BrightSettings *s, json_object *msgs, char **msg) {
     int len = 0;
     int ret = E_SUCCESS;
     struct json_object *j_next_msg = NULL;
+    struct json_object *j_msg = NULL;
     time_t timestamp = 0;
     bool do_read = false;
 
@@ -189,31 +190,34 @@ int bright_get_unread(BrightState *state, BrightSettings *s, json_object *msgs, 
             }
 
             if (do_read) {
-                if ((*msg) == NULL) {
-                    *msg = j_next_msg;
+                if (j_msg == NULL) {
+                    j_msg = j_next_msg;
                 }
                 (state->unread)++;
             }
             continue;
         }
         // When we have exaused all unread messages
-        else if ((*msg) != NULL || i == len) {
+        else if ((j_msg) != NULL || i == len) {
             break;
         }
     }
 
-    if ((*msg) != NULL) {
+    if ((j_msg) != NULL) {
         printf("There are %d unread messages\n", state->unread);
 
-        if ((timestamp = bright_get_timestamp(*msg)) == 0) {
+        if ((timestamp = bright_get_timestamp(j_msg)) == 0) {
             fprintf(stderr, "[%s] Unable to get unread message timestamp\n", __func__);
             ret = E_JSON_PARSE;
         }
 
         state->lastTimestamp = timestamp;
 
-        util_detach_json_child_idx(msgs, 0, *msg);
+        // Make a copy of the message body not managed by json-c
+        ret = util_json_get_str(j_msg, "body", msg, true);
     }
+
+    json_object_put(msgs);
 
     return ret;
 }

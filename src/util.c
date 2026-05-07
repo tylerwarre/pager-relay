@@ -83,6 +83,7 @@ int util_json_get_str(struct json_object *node, char *key, char **dest, bool all
         }
 
         strncpy(*dest, str, len);
+        (*dest)[len] = '\0';
     }
     else {
         if((*dest = (char *)json_object_get_string(obj)) == NULL) {
@@ -126,7 +127,8 @@ int util_json_get_int(struct json_object *node, char *key, int *value) {
     return E_SUCCESS;
 }
 
-int util_json_get_array(struct json_object *node, char *key, char **dest, void **array) {
+// Convert to using custom linked list
+int util_json_get_array(struct json_object *node, char *key, char ***dest) {
     int len = 0;
     int str_len = 0;
     struct json_object *obj = NULL;
@@ -142,7 +144,7 @@ int util_json_get_array(struct json_object *node, char *key, char **dest, void *
         return E_EMPTY;
     }
 
-    if ((*array = calloc(len, sizeof(void *))) == NULL) {
+    if ((*dest = calloc(len, sizeof(char *))) == NULL) {
         fprintf(stderr, "[%s] Unable to allocate memory for array\n", __func__);
         return E_OUTOFMEMORY;
     }
@@ -157,16 +159,19 @@ int util_json_get_array(struct json_object *node, char *key, char **dest, void *
             fprintf(stderr, "Unable to access json string with key: %s\n", key);
             return E_JSON_ACCESS;
         }
-        len = strlen(str);
+        str_len = strlen(str);
 
-        if ((*dest = calloc(len+1, 1)) == NULL) {
-            fprintf(stderr, "Ran out of memory when allocating json string with key: %s\n", key);
+        if (((*dest)[i] = calloc(str_len+1, 1)) == NULL) {
+            fprintf(stderr, "Ran out of memory when allocating string %d in key: %s\n", i, key);
             return E_OUTOFMEMORY;
         }
 
-        strncpy(*dest, str, len);
+        strncpy((*dest)[i], str, str_len);
+        // Ensure the string is null terminated
+        ((*dest)[i])[str_len] = '\0';
     }
 
+    return E_SUCCESS;
 }
 
 int util_re_substitute(const char *pattern, char **subj, char c, uint32_t opt) {
