@@ -127,7 +127,7 @@ int util_json_get_int(struct json_object *node, char *key, int *value) {
     return E_SUCCESS;
 }
 
-// Convert to using custom linked list
+// TODO: Convert to using custom linked list
 int util_json_get_array(struct json_object *node, char *key, char ***dest) {
     int len = 0;
     int str_len = 0;
@@ -239,7 +239,7 @@ int util_re_substitute(const char *pattern, char **subj, char c, uint32_t opt) {
     return ret;
 }
 
-static void util_re_sub_match(char *ptr, PCRE2_SIZE *ovector, PCRE2_SIZE *offset, char c) {
+void util_re_sub_match(char *ptr, PCRE2_SIZE *ovector, PCRE2_SIZE *offset, char c) {
     int len = 0;
     char *m = NULL;
     PCRE2_SIZE start = 0;
@@ -263,7 +263,7 @@ static void util_re_sub_match(char *ptr, PCRE2_SIZE *ovector, PCRE2_SIZE *offset
     return;
 }
 
-static pcre2_code* util_re_compile(const char *pattern, char *subj, uint32_t opt) {
+pcre2_code* util_re_compile(const char *pattern, char *subj, uint32_t opt) {
     int len = 0;
     int ret = E_SUCCESS;
     PCRE2_UCHAR err_msg[RE_ERR_LEN];
@@ -287,4 +287,54 @@ static pcre2_code* util_re_compile(const char *pattern, char *subj, uint32_t opt
     }
 
     return re;
+}
+
+List* util_list_new(char *str) {
+    int len = 0;
+    List *l = NULL;
+
+    if ((l = calloc(1,sizeof(List))) == NULL) {
+        fprintf(stderr, "[%s] ran out of memory allocating List\n", __func__);
+        return NULL;
+    }
+
+    if ((len = strlen(str)) < 1) {
+        if (l != NULL) {
+            free(l);
+            l = NULL;
+        }
+
+        fprintf(stderr, "[%s] Emptry string provided\n", __func__);
+        return NULL;
+    }
+
+    if ((l->str = calloc(len+1, 1)) == NULL) {
+        if (l != NULL) {
+            free(l);
+            l = NULL;
+        }
+
+        fprintf(stderr, "[%s] ran out of memory allocating List item\n", __func__);
+        return NULL;
+    }
+
+    strncpy(l->str, str, len);
+    l->next = NULL;
+
+    return l;
+}
+
+void util_list_free(List *l) {
+    for (List *next = l->next; next != NULL; l = next, next = l->next) {
+        if (l->str != NULL) {
+            free(l->str);
+            l->str = NULL;
+        }
+        free(l);
+    }
+    if (l->str != NULL) {
+        free(l->str);
+        l->str = NULL;
+    }
+    free(l);
 }

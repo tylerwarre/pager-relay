@@ -37,6 +37,12 @@ int main() {
         return (int)c_errno;
     }
 
+    // TODO: Testing Start
+    List *l = NULL;
+    l = util_list_new("Tyler");
+    util_list_free(l);
+    // TODO: Testing End
+
     // TODO: implement a loop from here down until the free functions
     while (true) {
         if ((ret = bright_get_msgs(s->brightwheel, &msgs)) != E_SUCCESS) {
