@@ -3,6 +3,8 @@
 
 #include <json-c/json_object.h>
 
+#include "util.h"
+
 typedef struct BrightSettings {
     char *token;
     bool includeBroadcasts;
@@ -11,7 +13,7 @@ typedef struct BrightSettings {
 
 typedef struct EmailSettings {
     char *sender;
-    char **receipients;
+    List *receipients;
     char *password;
     int throttle;
 } EmailSettings;

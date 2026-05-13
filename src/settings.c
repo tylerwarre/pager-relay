@@ -139,16 +139,7 @@ static void settings_email_free(EmailSettings *s) {
     }
 
     // Free entires in receipients array
-    for (int i = 0; i < (sizeof(s->receipients)/sizeof(char*)); i++) {
-        if ((s->receipients)[i] != NULL) {
-            free((s->receipients)[i]);
-            (s->receipients)[i] = NULL;
-        }
-    }
-    if (s->receipients != NULL) {
-        free(s->receipients);
-        s->receipients = NULL;
-    }
+    util_list_free(s->receipients);
 
     if (s != NULL) {
         free(s);

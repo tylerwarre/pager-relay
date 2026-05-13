@@ -28,7 +28,7 @@ int util_print_json_str(struct json_object *parent, char *key);
 int util_json_get_str(struct json_object *node, char *key, char **dest, bool allocate);
 int util_json_get_bool(struct json_object *node, char *key, bool *value);
 int util_json_get_int(struct json_object *node, char *key, int *value);
-int util_json_get_array(struct json_object *node, char *key, char ***dest);
+int util_json_get_array(struct json_object *node, char *key, List **dest);
 int util_re_substitute(const char *pattern, char **subj, char c, uint32_t opt);
 
 // pcre2 helpers
@@ -36,9 +36,8 @@ pcre2_code* util_re_compile(const char *pattern, char *subj, uint32_t opt);
 void util_re_sub_match(char *subj, PCRE2_SIZE *ovector, PCRE2_SIZE *offset, char c);
 
 // linked list functions
-List* util_list_new(char *str);
 void util_list_free(List *l);
-bool util_list_append(List *l, char *str);
+bool util_list_append(List **l, const char *str);
 
 
 #endif

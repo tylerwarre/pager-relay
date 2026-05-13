@@ -128,7 +128,7 @@ int util_json_get_int(struct json_object *node, char *key, int *value) {
 }
 
 // TODO: Convert to using custom linked list
-int util_json_get_array(struct json_object *node, char *key, char ***dest) {
+int util_json_get_array(struct json_object *node, char *key, List **dest) {
     int len = 0;
     int str_len = 0;
     struct json_object *obj = NULL;
@@ -144,11 +144,6 @@ int util_json_get_array(struct json_object *node, char *key, char ***dest) {
         return E_EMPTY;
     }
 
-    if ((*dest = calloc(len, sizeof(char *))) == NULL) {
-        fprintf(stderr, "[%s] Unable to allocate memory for array\n", __func__);
-        return E_OUTOFMEMORY;
-    }
-
     for (int i = 0; i < len; i++) {
         if ((obj = json_object_array_get_idx(node, i)) == NULL) {
             fprintf(stderr, "[%s] Unable to get obj at index: %d\n", __func__, i);
@@ -161,14 +156,7 @@ int util_json_get_array(struct json_object *node, char *key, char ***dest) {
         }
         str_len = strlen(str);
 
-        if (((*dest)[i] = calloc(str_len+1, 1)) == NULL) {
-            fprintf(stderr, "Ran out of memory when allocating string %d in key: %s\n", i, key);
-            return E_OUTOFMEMORY;
-        }
-
-        strncpy((*dest)[i], str, str_len);
-        // Ensure the string is null terminated
-        ((*dest)[i])[str_len] = '\0';
+        util_list_append(dest, str);
     }
 
     return E_SUCCESS;
@@ -289,41 +277,6 @@ pcre2_code* util_re_compile(const char *pattern, char *subj, uint32_t opt) {
     return re;
 }
 
-List* util_list_new(char *str) {
-    int len = 0;
-    List *l = NULL;
-
-    if ((l = calloc(1,sizeof(List))) == NULL) {
-        fprintf(stderr, "[%s] ran out of memory allocating List\n", __func__);
-        return NULL;
-    }
-
-    if ((len = strlen(str)) < 1) {
-        if (l != NULL) {
-            free(l);
-            l = NULL;
-        }
-
-        fprintf(stderr, "[%s] Emptry string provided\n", __func__);
-        return NULL;
-    }
-
-    if ((l->str = calloc(len+1, 1)) == NULL) {
-        if (l != NULL) {
-            free(l);
-            l = NULL;
-        }
-
-        fprintf(stderr, "[%s] ran out of memory allocating List item\n", __func__);
-        return NULL;
-    }
-
-    strncpy(l->str, str, len);
-    l->next = NULL;
-
-    return l;
-}
-
 void util_list_free(List *l) {
     for (List *next = l->next; next != NULL; l = next, next = l->next) {
         if (l->str != NULL) {
@@ -339,41 +292,48 @@ void util_list_free(List *l) {
     free(l);
 }
 
-bool util_list_append(List *l, char *str) {
+bool util_list_append(List **l, const char *str) {
     int len = 0;
-    List *ptr = l;
-
-    // Seek to the end of the list
-    while (ptr->next != NULL) {
-        ptr = ptr->next;
-    }
-
-    if ((ptr->next = calloc(1, sizeof(List))) == NULL) {
-        fprintf(stderr, "[%s] ran out of memory allocating List\n", __func__);
-        return false;
-    }
+    List *ptr = *l;
 
     if ((len = strlen(str)) < 1) {
-        if (ptr->next != NULL) {
-            free(ptr->next);
-            ptr->next = NULL;
-        }
-
         fprintf(stderr, "[%s] Emptry string provided\n", __func__);
         return false;
     }
 
-    if ((ptr->next->str = calloc(len+1, 1)) == NULL) {
-        if (ptr->next != NULL) {
-            free(ptr->next);
-            ptr->next = NULL;
+    // If the list is not empty
+    if (*l != NULL) {
+        while (ptr->next != NULL) {
+            ptr = ptr->next;
+        }
+
+        if ((ptr->next = calloc(1, sizeof(List))) == NULL) {
+            fprintf(stderr, "[%s] ran out of memory allocating List\n", __func__);
+            return false;
+        }
+
+        ptr = ptr->next;
+    }
+    // If the list is empty
+    else {
+        if ((ptr = calloc(1, sizeof(List))) == NULL) {
+            fprintf(stderr, "[%s] ran out of memory allocating List\n", __func__);
+            return false;
+        }
+
+        *l = ptr;
+    }
+
+    if ((ptr->str = calloc(len+1, 1)) == NULL) {
+        if (ptr != NULL) {
+            free(ptr);
+            ptr = NULL;
         }
 
         fprintf(stderr, "[%s] ran out of memory allocating List item\n", __func__);
         return false;
     }
 
-    ptr = ptr->next;
     strncpy(ptr->str, str, len);
     ptr->next = NULL;
 
