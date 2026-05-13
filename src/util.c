@@ -83,6 +83,7 @@ int util_json_get_str(struct json_object *node, char *key, char **dest, bool all
         }
 
         strncpy(*dest, str, len);
+        (*dest)[len] = '\0';
     }
     else {
         if((*dest = (char *)json_object_get_string(obj)) == NULL) {
@@ -105,6 +106,58 @@ int util_json_get_bool(struct json_object *node, char *key, bool *value) {
     }
 
     *value = json_object_get_boolean(obj);
+
+    return E_SUCCESS;
+}
+
+int util_json_get_int(struct json_object *node, char *key, int *value) {
+    struct json_object *obj = NULL;
+    if(json_object_object_get_ex(node, key, &obj) == false) {
+        fprintf(stderr, "Unable to parse json int with key: %s\n", key);
+        return E_JSON_PARSE;
+    }
+
+    *value = json_object_get_int(obj);
+
+    if (*value == 0 || *value == INT_MAX || *value == INT_MIN) {
+        fprintf(stderr, "Invlaid integer being parsed: %s\n", key);
+        return E_JSON_PARSE;
+    }
+
+    return E_SUCCESS;
+}
+
+// TODO: Convert to using custom linked list
+int util_json_get_array(struct json_object *node, char *key, List **dest) {
+    int len = 0;
+    int str_len = 0;
+    struct json_object *obj = NULL;
+    const char *str = NULL;
+
+    if(json_object_object_get_ex(node, key, &node) == false) {
+        fprintf(stderr, "Unable to parse json array with key: %s\n", key);
+        return E_JSON_PARSE;
+    }
+
+    if((len = json_object_array_length(node)) < 1) {
+        fprintf(stderr, "[%s] array is empty for key %s\n", key, __func__);
+        return E_EMPTY;
+    }
+
+    for (int i = 0; i < len; i++) {
+        if ((obj = json_object_array_get_idx(node, i)) == NULL) {
+            fprintf(stderr, "[%s] Unable to get obj at index: %d\n", __func__, i);
+            return E_JSON_PARSE;
+        }
+
+        if((str = json_object_get_string(obj)) == NULL) {
+            fprintf(stderr, "Unable to access json string with key: %s\n", key);
+            return E_JSON_ACCESS;
+        }
+        str_len = strlen(str);
+
+        util_list_append(dest, str);
+    }
 
     return E_SUCCESS;
 }
@@ -174,7 +227,7 @@ int util_re_substitute(const char *pattern, char **subj, char c, uint32_t opt) {
     return ret;
 }
 
-static void util_re_sub_match(char *ptr, PCRE2_SIZE *ovector, PCRE2_SIZE *offset, char c) {
+void util_re_sub_match(char *ptr, PCRE2_SIZE *ovector, PCRE2_SIZE *offset, char c) {
     int len = 0;
     char *m = NULL;
     PCRE2_SIZE start = 0;
@@ -198,7 +251,7 @@ static void util_re_sub_match(char *ptr, PCRE2_SIZE *ovector, PCRE2_SIZE *offset
     return;
 }
 
-static pcre2_code* util_re_compile(const char *pattern, char *subj, uint32_t opt) {
+pcre2_code* util_re_compile(const char *pattern, char *subj, uint32_t opt) {
     int len = 0;
     int ret = E_SUCCESS;
     PCRE2_UCHAR err_msg[RE_ERR_LEN];
@@ -222,4 +275,67 @@ static pcre2_code* util_re_compile(const char *pattern, char *subj, uint32_t opt
     }
 
     return re;
+}
+
+void util_list_free(List *l) {
+    for (List *next = l->next; next != NULL; l = next, next = l->next) {
+        if (l->str != NULL) {
+            free(l->str);
+            l->str = NULL;
+        }
+        free(l);
+    }
+    if (l->str != NULL) {
+        free(l->str);
+        l->str = NULL;
+    }
+    free(l);
+}
+
+bool util_list_append(List **l, const char *str) {
+    int len = 0;
+    List *ptr = *l;
+
+    if ((len = strlen(str)) < 1) {
+        fprintf(stderr, "[%s] Emptry string provided\n", __func__);
+        return false;
+    }
+
+    // If the list is not empty
+    if (*l != NULL) {
+        while (ptr->next != NULL) {
+            ptr = ptr->next;
+        }
+
+        if ((ptr->next = calloc(1, sizeof(List))) == NULL) {
+            fprintf(stderr, "[%s] ran out of memory allocating List\n", __func__);
+            return false;
+        }
+
+        ptr = ptr->next;
+    }
+    // If the list is empty
+    else {
+        if ((ptr = calloc(1, sizeof(List))) == NULL) {
+            fprintf(stderr, "[%s] ran out of memory allocating List\n", __func__);
+            return false;
+        }
+
+        *l = ptr;
+    }
+
+    if ((ptr->str = calloc(len+1, 1)) == NULL) {
+        if (ptr != NULL) {
+            free(ptr);
+            ptr = NULL;
+        }
+
+        fprintf(stderr, "[%s] ran out of memory allocating List item\n", __func__);
+        return false;
+    }
+
+    strncpy(ptr->str, str, len);
+    ptr->next = NULL;
+
+    return true;
 }

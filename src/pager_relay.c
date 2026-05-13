@@ -18,7 +18,7 @@ int main() {
     RelaySettings *s = NULL;
     RelayState *state = NULL;
     struct json_object *msgs = NULL;
-    struct json_object *msg = NULL;
+    char *msg = NULL;
 
     if ((s = settings_new()) == NULL) {
         return E_OUTOFMEMORY;
@@ -38,29 +38,29 @@ int main() {
         return (int)c_errno;
     }
 
-    // TODO: implement a loop from here down until the free functions
-    
-    if ((ret = bright_get_msgs(s->brightwheel, &msgs)) != E_SUCCESS) {
-        return ret;
+    while (true) {
+        if ((ret = bright_get_msgs(s->brightwheel, &msgs)) != E_SUCCESS) {
+            return ret;
+        }
+
+        if ((ret = bright_get_unread(state->brightState, s->brightwheel, msgs, &msg)) != E_SUCCESS) {
+            return ret;
+        }
+
+        util_re_substitute(RE_PATTERN_INVALID_USASCII, &msg, '^', PCRE2_NOTEMPTY);
+        bright_truncate_msgs(state->brightState->unread, &msg);
+        email_send((EmailSettings *)NULL, msg, brightwheel);
+
+        if (msg != NULL) {
+            free(msg);
+            msg = NULL;
+        }
+
+        // TODO: Testing
+        break;
     }
-
-
-    if ((ret = bright_get_unread(state->brightState, s->brightwheel, msgs, &msg)) != E_SUCCESS) {
-        return ret;
-    }
-
-    // TODO: Testing
-    char *body = NULL;
-    util_json_get_str(msg, "body", &body, true);
-    util_re_substitute(RE_PATTERN_INVALID_USASCII, &body, '^', PCRE2_NOTEMPTY);
-    email_send((EmailSettings *)NULL, body, brightwheel);
-    free(body);
-    // TODO: End Testing
 
     json_object_put(msg);
-
-    // TODO: End loop here
-
 
     // Free Relay objects
     settings_free(s);

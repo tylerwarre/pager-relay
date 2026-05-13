@@ -138,10 +138,11 @@ int bright_evaluate_msg(BrightSettings *s, struct json_object *msg, bool *do_rea
  * @param [out] msg a json_object pointer that returns last unread message
  * @returns an int representing the error code. E_SUCCESS is the only success code
  */
-int bright_get_unread(BrightState *state, BrightSettings *s, json_object *msgs, struct json_object **msg) {
+int bright_get_unread(BrightState *state, BrightSettings *s, json_object *msgs, char **msg) {
     int len = 0;
     int ret = E_SUCCESS;
     struct json_object *j_next_msg = NULL;
+    struct json_object *j_msg = NULL;
     time_t timestamp = 0;
     bool do_read = false;
 
@@ -189,31 +190,34 @@ int bright_get_unread(BrightState *state, BrightSettings *s, json_object *msgs, 
             }
 
             if (do_read) {
-                if ((*msg) == NULL) {
-                    *msg = j_next_msg;
+                if (j_msg == NULL) {
+                    j_msg = j_next_msg;
                 }
                 (state->unread)++;
             }
             continue;
         }
         // When we have exaused all unread messages
-        else if ((*msg) != NULL || i == len) {
+        else if ((j_msg) != NULL || i == len) {
             break;
         }
     }
 
-    if ((*msg) != NULL) {
+    if ((j_msg) != NULL) {
         printf("There are %d unread messages\n", state->unread);
 
-        if ((timestamp = bright_get_timestamp(*msg)) == 0) {
+        if ((timestamp = bright_get_timestamp(j_msg)) == 0) {
             fprintf(stderr, "[%s] Unable to get unread message timestamp\n", __func__);
             ret = E_JSON_PARSE;
         }
 
         state->lastTimestamp = timestamp;
 
-        util_detach_json_child_idx(msgs, 0, *msg);
+        // Make a copy of the message body not managed by json-c
+        ret = util_json_get_str(j_msg, "body", msg, true);
     }
+
+    json_object_put(msgs);
 
     return ret;
 }
@@ -222,46 +226,49 @@ int bright_get_unread(BrightState *state, BrightSettings *s, json_object *msgs, 
 //  based on API call
 int bright_truncate_msgs(uint8_t unread, char **msg) {
     int len = 0;
-    int len_suffix = 9;
+    int len_suffix = 8;
     int delta = 0;
-    char suffix[] = "..+0 Msgs";
+    char suffix[] = "..+0 Msg";
     if ((len = strlen(*msg)) < 1) {
         fprintf(stderr, "[%s] message is empty\n", __func__);
         return E_EMPTY;
     }
 
-    // If there is more than 1 unread message
-    if (unread > 1) {
-        // Fill in the number of additional unread messages
-        suffix[3] = unread-1;
-
-        delta = EMAIL_MAX_LEN - (len+len_suffix);
+    delta = EMAIL_MAX_LEN - len;
+    // If we only have 1 unread message and don't need to add the additional unread count
+    if (unread == 1) {
+        // If our current message is larger than the max size the pager will accept
+        if (delta < 0) {
+            *msg = realloc(*msg, EMAIL_MAX_LEN+1);
+            // Null terminate the truncated string
+            (*msg)[EMAIL_MAX_LEN] = '\0';
+        }
     }
+    // TODO: Ensure there is no way to have unread < 1
     else {
-        delta = EMAIL_MAX_LEN - len;
-    }
-
-    // If we are larger than the max length truncate
-    if (delta < 0) {
-        *msg = realloc(*msg,EMAIL_MAX_LEN+1);
-    }
-    // If we are smaller than the max length and have more than one unread message
-    //  we need to allocate more space for the suffix
-    else if (unread > 1) {
-        *msg = realloc(*msg,len+len_suffix+1);
-    }
-
-    // If we have multiple unread messages and we are the maximum length
-    //  we need to write over the end of our string with the suffix
-    if (unread > 1 && delta < 0) {
-        memmove(*msg+(len-len_suffix), suffix, len_suffix);
-        *msg[EMAIL_MAX_LEN] = '\0';
-    }
-    // If we have multiple unread messages and we had extra space
-    //  just append the suffix
-    else if (unread > 1) {
-        memmove(*msg+len, suffix, len_suffix);
-        *msg[len+len_suffix] = '\0';
+        suffix[3] = (char)((unread-1) + '0');
+        // If our current message is smaller than the max size the pager will accept
+        //  and it can fit the suffix
+        if (delta >= len_suffix) {
+            if ((*msg = realloc(*msg, len+len_suffix+1)) == NULL) {
+                fprintf(stderr, "[%s] out of memory to resize message length\n", __func__);
+                return E_OUTOFMEMORY;
+            }
+            // TODO: replace with function with better error handling
+            *msg = strcat(*msg, suffix);
+        }
+        // If our current message is greater than or equal to the max size the page will
+        // accept
+        else if (delta < 0) {
+            if ((*msg = realloc(*msg, EMAIL_MAX_LEN+1)) == NULL) {
+                fprintf(stderr, "[%s] out of memory to resize message length\n", __func__);
+                return E_OUTOFMEMORY;
+            }
+            // NUll terminate the truncated string
+            (*msg)[EMAIL_MAX_LEN] = '\0';
+            // Place the suffix at the end of the string offset by the length of the suffix
+            memmove(*msg+(EMAIL_MAX_LEN-len_suffix), suffix, len_suffix);
+        }
     }
 
     return E_SUCCESS;
