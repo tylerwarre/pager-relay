@@ -20,8 +20,8 @@ typedef enum {
 
 // TODO: Update "To/From" to not use <>
 static const char *EMAIL_FMT =
-    "To: <%s>\r\n"
-    "From: <%s>\r\n"
+    "To: %s\r\n"
+    "From: %s\r\n"
     "Content-Type: text/plain; charset=us-ascii\r\n"
     "Content-Transfer-Encoding: 7bit\r\n"
     "MIME-Version: 1.0\r\n"
@@ -31,7 +31,12 @@ static const char *EMAIL_FMT =
     "%s"
     "\r\n";
 
+static const int date_len = 31;
+static const char *SUBJ_BRIGHTWHEEL = "Brightwheel Fwd";
+
 int email_send(EmailSettings *s, char *msg, EmailType type);
 static size_t cb_read(char *ptr, size_t size, size_t nmemb, void *userp);
+static int email_len(EmailSettings *s, char *body, EmailType type);
+static char* prepare_email(EmailSettings *s, char *body, EmailType type);
 
 #endif

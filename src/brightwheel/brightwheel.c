@@ -224,6 +224,7 @@ int bright_get_unread(BrightState *state, BrightSettings *s, json_object *msgs, 
 
 // Built in assumption that less than 10 messages can possibly be unread
 //  based on API call
+// TODO: There might be a bug try messag from 05/08/2026 @ 0805
 int bright_truncate_msgs(uint8_t unread, char **msg) {
     int len = 0;
     int len_suffix = 8;

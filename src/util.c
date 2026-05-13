@@ -339,3 +339,44 @@ bool util_list_append(List **l, const char *str) {
 
     return true;
 }
+
+int util_list_len(List *l, char *delim) {
+    int len = 0;
+    List *ptr = l;
+    int delim_len = strlen(delim);
+
+    // Get the length of all strings in the list
+    while (ptr->next != NULL) {
+        // Add delimiter length for entires that are not at the end
+        len += strlen(ptr->str) + delim_len;
+        ptr = ptr->next;
+    }
+    // Make sure to get the last entry in the list
+    len += strlen(ptr->str);
+
+    return len;
+}
+
+char* util_list_tostring(List *l, char *delim) {
+    int len = 0;
+    int delim_len = strlen(delim);
+    List *ptr = l;
+    char *str = NULL;
+
+    len = util_list_len(l, delim);
+
+    // Allocate memory for list string
+    if ((str = calloc(len+1, sizeof(char))) == NULL) {
+        fprintf(stderr, "[%s] unable to allocate memory for List str\n", __func__);
+        return NULL;
+    }
+
+    while (ptr->next != NULL) {
+        strcat(str, ptr->str);
+        strcat(str, delim);
+        ptr = ptr->next;
+    }
+    strcat(str, ptr->str);
+
+    return str;
+}

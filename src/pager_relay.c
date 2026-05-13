@@ -49,7 +49,7 @@ int main() {
 
         util_re_substitute(RE_PATTERN_INVALID_USASCII, &msg, '^', PCRE2_NOTEMPTY);
         bright_truncate_msgs(state->brightState->unread, &msg);
-        email_send((EmailSettings *)NULL, msg, brightwheel);
+        email_send(s->email, msg, brightwheel);
 
         if (msg != NULL) {
             free(msg);
@@ -59,8 +59,6 @@ int main() {
         // TODO: Testing
         break;
     }
-
-    json_object_put(msg);
 
     // Free Relay objects
     settings_free(s);

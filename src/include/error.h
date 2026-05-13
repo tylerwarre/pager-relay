@@ -10,5 +10,6 @@
 #define E_RE_NOMATCH        6
 #define E_OUTOFMEMORY       7
 #define E_CONVERT           8
+#define E_EMAIL             9
 
 #endif

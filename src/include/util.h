@@ -38,6 +38,8 @@ void util_re_sub_match(char *subj, PCRE2_SIZE *ovector, PCRE2_SIZE *offset, char
 // linked list functions
 void util_list_free(List *l);
 bool util_list_append(List **l, const char *str);
+int util_list_len(List *l, char *delim);
+char* util_list_tostring(List *l, char *delim);
 
 
 #endif
