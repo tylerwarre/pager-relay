@@ -40,6 +40,7 @@ int main() {
     // TODO: Testing Start
     List *l = NULL;
     l = util_list_new("Tyler");
+    util_list_append(l, "Warren");
     util_list_free(l);
     // TODO: Testing End
 

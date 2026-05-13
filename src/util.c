@@ -338,3 +338,44 @@ void util_list_free(List *l) {
     }
     free(l);
 }
+
+bool util_list_append(List *l, char *str) {
+    int len = 0;
+    List *ptr = l;
+
+    // Seek to the end of the list
+    while (ptr->next != NULL) {
+        ptr = ptr->next;
+    }
+
+    if ((ptr->next = calloc(1, sizeof(List))) == NULL) {
+        fprintf(stderr, "[%s] ran out of memory allocating List\n", __func__);
+        return false;
+    }
+
+    if ((len = strlen(str)) < 1) {
+        if (ptr->next != NULL) {
+            free(ptr->next);
+            ptr->next = NULL;
+        }
+
+        fprintf(stderr, "[%s] Emptry string provided\n", __func__);
+        return false;
+    }
+
+    if ((ptr->next->str = calloc(len+1, 1)) == NULL) {
+        if (ptr->next != NULL) {
+            free(ptr->next);
+            ptr->next = NULL;
+        }
+
+        fprintf(stderr, "[%s] ran out of memory allocating List item\n", __func__);
+        return false;
+    }
+
+    ptr = ptr->next;
+    strncpy(ptr->str, str, len);
+    ptr->next = NULL;
+
+    return true;
+}

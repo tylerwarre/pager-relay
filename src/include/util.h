@@ -38,7 +38,7 @@ void util_re_sub_match(char *subj, PCRE2_SIZE *ovector, PCRE2_SIZE *offset, char
 // linked list functions
 List* util_list_new(char *str);
 void util_list_free(List *l);
-int util_list_add(List *l, char *str);
+bool util_list_append(List *l, char *str);
 
 
 #endif
