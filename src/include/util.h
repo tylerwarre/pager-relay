@@ -1,6 +1,8 @@
 #ifndef UTIL_H
 #define UTIL_H
 
+#include <stdbool.h>
+
 #include <json-c/json.h>
 #include <pcre2.h>
 

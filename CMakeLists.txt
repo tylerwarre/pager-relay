@@ -45,3 +45,7 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
             "${CMAKE_SOURCE_DIR}/compile_commands.json"
     )
 endif()
+
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+    add_subdirectory(tests)
+endif()
