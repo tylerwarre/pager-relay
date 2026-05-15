@@ -2,7 +2,9 @@
 
 #include <stdio.h>
 #include <string.h>
+
 #include "substitute.h"
+
 static char* read_file(char *msg_name) {
     char *path = NULL;
     char *msg = NULL;
@@ -69,7 +71,8 @@ static bool test_case(char *msg_name) {
     bool result = true;
 
     if ((msg = read_file(msg_name)) != NULL) {
-        if (util_re_substitute(RE_PATTERN_INVALID_USASCII, &msg, '^', PCRE2_NOTEMPTY) != 0) {
+
+        if (util_re_substitute((const char*)"[^\\x20-\\x7F]+", &msg, '^', 0) != PCRE2_ERROR_NOMATCH) {
             result = false;
         }
 

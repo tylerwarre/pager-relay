@@ -47,7 +47,7 @@ int main() {
             return ret;
         }
 
-        util_re_substitute(RE_PATTERN_INVALID_USASCII, &msg, '^', PCRE2_NOTEMPTY);
+        util_re_substitute(RE_PATTERN_INVALID_USASCII, &msg, '^', 0);
         bright_truncate_msgs(state->brightState->unread, &msg);
         email_send(s->email, msg, brightwheel);
 

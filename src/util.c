@@ -5,11 +5,8 @@
 #include "util.h"
 #include "error.h"
 
-const char *RE_PATTERN_UTF8 = "[\\x00-\\x7F]|[\\xC2-\\xDF][\\x80-\\xBF]|\\xE0[\\xA0-\\xBF][\\x80-\\xBF]|[\\xE1-\\xEC\\xEE\\xEF][\\x80-\\xBF]{2}|\\xED[\\x80-\\x9F][\\x80-\\xBF]|\\xF0[\\x90-\\xBF][\\x80-\\xBF]{2}|[\\xF1-\\xF3][\\x80-\\xBF]{3}|\\xF4[\\x80-\\x8F][\\x80-\\xBF]{2}";
-// Smaple emoji regex (\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])
-const char *RE_PATTERN_EMOJI = "(\\xF0[\\x90-\\xBF][\\x80-\\xBF][\\x80-\\xBF])";
 // This is technically only the printable us-ascii characterset
-const char *RE_PATTERN_INVALID_USASCII = "([^\\x20-\\x7F]+)";
+const char *RE_PATTERN_INVALID_USASCII = "[^\\x20-\\x7F]+";
 
 void util_detach_json_child_idx(struct json_object *parent, int child_index, struct json_object *child) {
     // Increment child object references
@@ -184,8 +181,7 @@ int util_re_substitute(const char *pattern, char **subj, char c, uint32_t opt) {
 
     while (match != NULL) {
         if ((len = strlen(*subj+offset)) == 0) {
-            fprintf(stderr, "Subject is empty\n");
-            ret = E_EMPTY;
+            ret = PCRE2_ERROR_NOMATCH;
             break;
         }
 
@@ -193,7 +189,6 @@ int util_re_substitute(const char *pattern, char **subj, char c, uint32_t opt) {
         ret = pcre2_match(re, (PCRE2_SPTR)*subj+offset, len, opt, 0, match, NULL);
         if (ret == PCRE2_ERROR_NOMATCH)
         {
-            ret = E_RE_NOMATCH;
             break;
         }
         else if (ret < 1)
@@ -251,18 +246,12 @@ void util_re_sub_match(char *ptr, PCRE2_SIZE *ovector, PCRE2_SIZE *offset, char 
 }
 
 pcre2_code* util_re_compile(const char *pattern, char *subj, uint32_t opt) {
-    int len = 0;
     int ret = E_SUCCESS;
     PCRE2_UCHAR err_msg[RE_ERR_LEN];
     PCRE2_SIZE error_offset = 0;
     pcre2_code *re = NULL;
 
-    if ((len = strlen(pattern)) == 0) {
-        fprintf(stderr, "Regex pattern is empty\n");
-        return NULL;
-    }
-
-    re = pcre2_compile((PCRE2_SPTR)pattern, len, opt, &ret, &error_offset, NULL);
+    re = pcre2_compile((PCRE2_SPTR)pattern, PCRE2_ZERO_TERMINATED, opt, &ret, &error_offset, NULL);
     if (re == NULL) {
         if (pcre2_get_error_message(ret, err_msg, RE_ERR_LEN) < 0) {
             fprintf(stderr, "Unable to compile regex expression: %d\n", ret);
