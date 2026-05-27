@@ -139,7 +139,7 @@ static void settings_email_free(EmailSettings *s) {
     }
 
     // Free entires in receipients array
-    util_list_free(s->receipients);
+    curl_slist_free_all(s->receipients);
 
     if (s != NULL) {
         free(s);

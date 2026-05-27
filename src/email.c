@@ -35,14 +35,13 @@ static size_t cb_read(char *ptr, size_t size, size_t nmemb, void *userp) {
 
 static int email_len(EmailSettings *s, char *body, EmailType type) {
     int len = 0;
-    List *ptr = NULL;
 
     // Get length of FMT string w/o placeholders
     // -10 is used because there are five 2 character placeholders
     len += strlen(EMAIL_FMT) - 10;
 
     // Get length of To
-    len += util_list_len(s->receipients, ", ");
+    len += recipient_str_len(s->receipients);
 
     // Get length of From
     len += strlen(s->sender);
@@ -85,7 +84,7 @@ static char* prepare_email(EmailSettings *s, char *body, EmailType type) {
         }
 
         // Get To string
-        if ((to = util_list_tostring(s->receipients, ", ")) == NULL) {
+        if ((to = recipients_tostring(s->receipients)) == NULL) {
             err = true;
             break;
         }
@@ -130,10 +129,8 @@ static char* prepare_email(EmailSettings *s, char *body, EmailType type) {
 
 int email_send(EmailSettings *s, char *body, EmailType type) {
     char *msg = NULL;
-    List *ptr = NULL;
     CURL *curl = NULL;
     CURLcode ret = CURLE_OK;
-    struct curl_slist *recipients = NULL;
     EmailCtx upload_ctx = { 0 };
 
     if ((msg = prepare_email(s, body, type)) == NULL) {
@@ -161,21 +158,7 @@ int email_send(EmailSettings *s, char *body, EmailType type) {
 
         // Specify to/from
         curl_easy_setopt(curl, CURLOPT_MAIL_FROM, s->sender);
-
-        // TDOO: Conflict between email message email format at SMTP transaction. Probably need to seperate
-        //  cononical name and email address in settings
-        // build curl list of receipients
-        /*
-        ptr = s->receipients;
-        while (ptr->next != NULL) {
-            recipients = curl_slist_append(recipients, ptr->str);
-            ptr = ptr->next;
-        }
-        // Make sure we append the last item in the list
-        recipients = curl_slist_append(recipients, ptr->str);
-        */
-        recipients = curl_slist_append(recipients, "tyler@warrens.one");
-        curl_easy_setopt(curl, CURLOPT_MAIL_RCPT, recipients);
+        curl_easy_setopt(curl, CURLOPT_MAIL_RCPT, s->receipients);
 
         // Configure how the message is uploaded
         curl_easy_setopt(curl, CURLOPT_READFUNCTION, cb_read);
@@ -193,8 +176,45 @@ int email_send(EmailSettings *s, char *body, EmailType type) {
         free(msg);
         msg = NULL;
     }
-    curl_slist_free_all(recipients);
     curl_easy_cleanup(curl);
 
     return (int)ret;
+}
+
+static int recipient_str_len(struct curl_slist *recipients) {
+    int len = 0;
+
+    while (recipients->next != NULL)
+    {
+        // Add delimiter length for entires that are not at the end
+        len += strlen(recipients->data) + 2;
+        recipients = recipients->next;
+    }
+    // Make sure to get the last entry in the list
+    len += strlen(recipients->data);
+
+    return len;
+}
+
+static char* recipients_tostring(struct curl_slist *recipients) {
+    int len = 0;
+    struct curl_slist *ptr = recipients;
+    char *str = NULL;
+
+    len = recipient_str_len(recipients);
+
+    // Allocate memory for list string
+    if ((str = calloc(len+1, sizeof(char))) == NULL) {
+        fprintf(stderr, "[%s] unable to allocate memory for recipient list string\n", __func__);
+        return NULL;
+    }
+
+    while (recipients->next != NULL) {
+        strcat(str, recipients->data);
+        strcat(str, ", ");
+        recipients = recipients->next;
+    }
+    strcat(str, recipients->data);
+
+    return str;
 }

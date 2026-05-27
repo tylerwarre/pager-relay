@@ -4,15 +4,10 @@
 #include <stdbool.h>
 
 #include <json-c/json.h>
+#include <curl/curl.h>
 #include <pcre2.h>
 
 #define RE_ERR_LEN 120
-
-struct List;
-typedef struct List {
-    char *str;
-    struct List *next;
-} List;
 
 extern const char *RE_PATTERN_UTF8;
 // This is technically only the printable us-ascii characterset
@@ -30,18 +25,11 @@ int util_print_json_str(struct json_object *parent, char *key);
 int util_json_get_str(struct json_object *node, char *key, char **dest, bool allocate);
 int util_json_get_bool(struct json_object *node, char *key, bool *value);
 int util_json_get_int(struct json_object *node, char *key, int *value);
-int util_json_get_array(struct json_object *node, char *key, List **dest);
+int util_json_get_array(struct json_object *node, char *key, struct curl_slist **dest);
 int util_re_substitute(const char *pattern, char **subj, char c, uint32_t opt);
 
 // pcre2 helpers
 pcre2_code* util_re_compile(const char *pattern, char *subj, uint32_t opt);
 void util_re_sub_match(char *subj, PCRE2_SIZE *ovector, PCRE2_SIZE *offset, char c);
-
-// linked list functions
-void util_list_free(List *l);
-bool util_list_append(List **l, const char *str);
-int util_list_len(List *l, char *delim);
-char* util_list_tostring(List *l, char *delim);
-
 
 #endif

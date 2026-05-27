@@ -13,7 +13,7 @@ typedef struct BrightSettings {
 
 typedef struct EmailSettings {
     char *sender;
-    List *receipients;
+    struct curl_slist *receipients;
     char *password;
     int throttle;
 } EmailSettings;

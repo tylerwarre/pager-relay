@@ -38,5 +38,7 @@ int email_send(EmailSettings *s, char *msg, EmailType type);
 static size_t cb_read(char *ptr, size_t size, size_t nmemb, void *userp);
 static int email_len(EmailSettings *s, char *body, EmailType type);
 static char* prepare_email(EmailSettings *s, char *body, EmailType type);
+static int recipient_str_len(struct curl_slist *recipients);
+static char* recipients_tostring(struct curl_slist *recipients);
 
 #endif

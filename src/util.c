@@ -124,7 +124,7 @@ int util_json_get_int(struct json_object *node, char *key, int *value) {
 }
 
 // TODO: Convert to using custom linked list
-int util_json_get_array(struct json_object *node, char *key, List **dest) {
+int util_json_get_array(struct json_object *node, char *key, struct curl_slist **dest) {
     int len = 0;
     int str_len = 0;
     struct json_object *obj = NULL;
@@ -152,7 +152,7 @@ int util_json_get_array(struct json_object *node, char *key, List **dest) {
         }
         str_len = strlen(str);
 
-        util_list_append(dest, str);
+        *dest = curl_slist_append(*dest, str);
     }
 
     return E_SUCCESS;
@@ -263,108 +263,4 @@ pcre2_code* util_re_compile(const char *pattern, char *subj, uint32_t opt) {
     }
 
     return re;
-}
-
-void util_list_free(List *l) {
-    for (List *next = l->next; next != NULL; l = next, next = l->next) {
-        if (l->str != NULL) {
-            free(l->str);
-            l->str = NULL;
-        }
-        free(l);
-    }
-    if (l->str != NULL) {
-        free(l->str);
-        l->str = NULL;
-    }
-    free(l);
-}
-
-bool util_list_append(List **l, const char *str) {
-    int len = 0;
-    List *ptr = *l;
-
-    if ((len = strlen(str)) < 1) {
-        fprintf(stderr, "[%s] Emptry string provided\n", __func__);
-        return false;
-    }
-
-    // If the list is not empty
-    if (*l != NULL) {
-        while (ptr->next != NULL) {
-            ptr = ptr->next;
-        }
-
-        if ((ptr->next = calloc(1, sizeof(List))) == NULL) {
-            fprintf(stderr, "[%s] ran out of memory allocating List\n", __func__);
-            return false;
-        }
-
-        ptr = ptr->next;
-    }
-    // If the list is empty
-    else {
-        if ((ptr = calloc(1, sizeof(List))) == NULL) {
-            fprintf(stderr, "[%s] ran out of memory allocating List\n", __func__);
-            return false;
-        }
-
-        *l = ptr;
-    }
-
-    if ((ptr->str = calloc(len+1, 1)) == NULL) {
-        if (ptr != NULL) {
-            free(ptr);
-            ptr = NULL;
-        }
-
-        fprintf(stderr, "[%s] ran out of memory allocating List item\n", __func__);
-        return false;
-    }
-
-    strncpy(ptr->str, str, len);
-    ptr->next = NULL;
-
-    return true;
-}
-
-int util_list_len(List *l, char *delim) {
-    int len = 0;
-    List *ptr = l;
-    int delim_len = strlen(delim);
-
-    // Get the length of all strings in the list
-    while (ptr->next != NULL) {
-        // Add delimiter length for entires that are not at the end
-        len += strlen(ptr->str) + delim_len;
-        ptr = ptr->next;
-    }
-    // Make sure to get the last entry in the list
-    len += strlen(ptr->str);
-
-    return len;
-}
-
-char* util_list_tostring(List *l, char *delim) {
-    int len = 0;
-    int delim_len = strlen(delim);
-    List *ptr = l;
-    char *str = NULL;
-
-    len = util_list_len(l, delim);
-
-    // Allocate memory for list string
-    if ((str = calloc(len+1, sizeof(char))) == NULL) {
-        fprintf(stderr, "[%s] unable to allocate memory for List str\n", __func__);
-        return NULL;
-    }
-
-    while (ptr->next != NULL) {
-        strcat(str, ptr->str);
-        strcat(str, delim);
-        ptr = ptr->next;
-    }
-    strcat(str, ptr->str);
-
-    return str;
 }
