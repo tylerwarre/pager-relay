@@ -10,8 +10,9 @@
 #include "http.h"
 #include "error.h"
 #include "util.h"
+#include "email.h"
 
-int bright_get_msgs(BrightwheelSettings *s, struct json_object **msgs) {
+int bright_get_msgs(BrightSettings *s, struct json_object **msgs) {
     CURL *curl = NULL;
     CURLcode ret = E_SUCCESS;
     HttpResponse resp = {0};
@@ -91,6 +92,45 @@ int bright_get_msgs(BrightwheelSettings *s, struct json_object **msgs) {
     return ret;
 }
 
+/** Evaluate whether a message should be read based on
+ * Brightwheel settings
+ * @param [in] s The parsed brighweel settings
+ * @param [in] msg The message being evaluated
+ * @param [out] do_read The result returned by reference. The passed in value
+ *  does not matter becase it is immediadly set to false
+ * @return an int representing the error code. E_SUCCESS on success
+ */
+int bright_evaluate_msg(BrightSettings *s, struct json_object *msg, bool *do_read) {
+    *do_read = true;
+    char *str = NULL;
+    bool is_true = false;
+    int ret = E_SUCCESS;
+    struct json_object *obj;
+
+    if ((ret = util_json_get_bool(msg, "broadcast", &is_true)) != E_SUCCESS) {
+        return ret;
+    }
+    // When it is a broadcast message and we do not include them
+    if (is_true && !(s->includeBroadcasts)) {
+        *do_read = false;
+        return E_SUCCESS;
+    }
+
+    if ((json_object_object_get_ex(msg, "sender", &obj)) == false) {
+        return E_JSON_PARSE;
+    }
+    if ((ret = util_json_get_str(obj, "user_type", &str, false)) != E_SUCCESS) {
+        return ret;
+    }
+    // When it is a guardian message and we do not include them
+    if ((strcmp(str, "guardian") == 0) && !(s->includeGuardians)) {
+        *do_read = false;
+        return E_SUCCESS;
+    }
+
+    return E_SUCCESS;
+}
+
 /** Gets the last unread message on brightwheel and
  * the number of total unread messages
  * @param [in] state The state of the Brighwheel plugin
@@ -98,11 +138,13 @@ int bright_get_msgs(BrightwheelSettings *s, struct json_object **msgs) {
  * @param [out] msg a json_object pointer that returns last unread message
  * @returns an int representing the error code. E_SUCCESS is the only success code
  */
-int bright_get_unread(BrightState *state, json_object *msgs, struct json_object **msg) {
+int bright_get_unread(BrightState *state, BrightSettings *s, json_object *msgs, char **msg) {
     int len = 0;
     int ret = E_SUCCESS;
     struct json_object *j_next_msg = NULL;
+    struct json_object *j_msg = NULL;
     time_t timestamp = 0;
+    bool do_read = false;
 
     if((len = json_object_array_length(msgs)) < 1) {
         fprintf(stderr, "[%s] message array is empty\n", __func__);
@@ -110,8 +152,7 @@ int bright_get_unread(BrightState *state, json_object *msgs, struct json_object 
     }
 
     // TODO: Testing
-    //state->lastTimestamp = 1776828186;
-    state->lastTimestamp = 1776197160;
+    state->lastTimestamp = 1777002614;
 
     for (int i = 0; i < len; i++) {
         if ((j_next_msg = json_object_array_get_idx(msgs, i)) == NULL) {
@@ -142,35 +183,99 @@ int bright_get_unread(BrightState *state, json_object *msgs, struct json_object 
         // When there is a new message
         else if (timestamp > state->lastTimestamp)
         {
-            if ((*msg) == NULL) {
-                *msg = j_next_msg;
+            if ((bright_evaluate_msg(s, j_next_msg, &do_read)) != E_SUCCESS) {
+                // Skip message if we can't evaluate it
+                fprintf(stderr, "Unable to evaluate message at index: %d\n", i);
+                continue;
             }
-            (state->unread)++;
+
+            if (do_read) {
+                if (j_msg == NULL) {
+                    j_msg = j_next_msg;
+                }
+                (state->unread)++;
+            }
             continue;
         }
         // When we have exaused all unread messages
-        else if ((*msg) != NULL || i == len) {
+        else if ((j_msg) != NULL || i == len) {
             break;
         }
     }
 
-    if ((*msg) != NULL) {
+    if ((j_msg) != NULL) {
         printf("There are %d unread messages\n", state->unread);
 
-        if ((timestamp = bright_get_timestamp(*msg)) == 0) {
+        if ((timestamp = bright_get_timestamp(j_msg)) == 0) {
             fprintf(stderr, "[%s] Unable to get unread message timestamp\n", __func__);
             ret = E_JSON_PARSE;
         }
 
         state->lastTimestamp = timestamp;
 
-        util_detach_json_child_idx(msgs, 0, *msg);
+        // Make a copy of the message body not managed by json-c
+        ret = util_json_get_str(j_msg, "body", msg, true);
     }
+
+    json_object_put(msgs);
 
     return ret;
 }
 
-static struct json_object* bright_parse_msgs(BrightwheelSettings *s, char *j_str) {
+// Built in assumption that less than 10 messages can possibly be unread
+//  based on API call
+// TODO: There might be a bug try messag from 05/08/2026 @ 0805
+int bright_truncate_msgs(uint8_t unread, char **msg) {
+    int len = 0;
+    int len_suffix = 8;
+    int delta = 0;
+    char suffix[] = "..+0 Msg";
+    if ((len = strlen(*msg)) < 1) {
+        fprintf(stderr, "[%s] message is empty\n", __func__);
+        return E_EMPTY;
+    }
+
+    delta = EMAIL_MAX_LEN - len;
+    // If we only have 1 unread message and don't need to add the additional unread count
+    if (unread == 1) {
+        // If our current message is larger than the max size the pager will accept
+        if (delta < 0) {
+            *msg = realloc(*msg, EMAIL_MAX_LEN+1);
+            // Null terminate the truncated string
+            (*msg)[EMAIL_MAX_LEN] = '\0';
+        }
+    }
+    // TODO: Ensure there is no way to have unread < 1
+    else {
+        suffix[3] = (char)((unread-1) + '0');
+        // If our current message is smaller than the max size the pager will accept
+        //  and it can fit the suffix
+        if (delta >= len_suffix) {
+            if ((*msg = realloc(*msg, len+len_suffix+1)) == NULL) {
+                fprintf(stderr, "[%s] out of memory to resize message length\n", __func__);
+                return E_OUTOFMEMORY;
+            }
+            // TODO: replace with function with better error handling
+            *msg = strcat(*msg, suffix);
+        }
+        // If our current message is greater than or equal to the max size the page will
+        // accept
+        else if (delta < 0) {
+            if ((*msg = realloc(*msg, EMAIL_MAX_LEN+1)) == NULL) {
+                fprintf(stderr, "[%s] out of memory to resize message length\n", __func__);
+                return E_OUTOFMEMORY;
+            }
+            // NUll terminate the truncated string
+            (*msg)[EMAIL_MAX_LEN] = '\0';
+            // Place the suffix at the end of the string offset by the length of the suffix
+            memmove(*msg+(EMAIL_MAX_LEN-len_suffix), suffix, len_suffix);
+        }
+    }
+
+    return E_SUCCESS;
+}
+
+static struct json_object* bright_parse_msgs(BrightSettings *s, char *j_str) {
     struct json_object *obj = NULL;
 
     #ifndef NDEBUG

@@ -3,12 +3,14 @@
 
 #include <stdio.h>
 #include <stdbool.h>
+#include <string.h>
 
 #include "include/error.h"
 #include "include/settings.h"
 #include "include/state.h"
 #include "brightwheel/brightwheel.h"
 #include "include/util.h"
+#include "include/email.h"
 
 int main() {
     int ret = E_SUCCESS;
@@ -16,7 +18,7 @@ int main() {
     RelaySettings *s = NULL;
     RelayState *state = NULL;
     struct json_object *msgs = NULL;
-    struct json_object *msg = NULL;
+    char *msg = NULL;
 
     if ((s = settings_new()) == NULL) {
         return E_OUTOFMEMORY;
@@ -36,22 +38,27 @@ int main() {
         return (int)c_errno;
     }
 
-    // TODO: implement a loop from here down until the free functions
-    
-    if ((ret = bright_get_msgs(s->brightwheel, &msgs)) != E_SUCCESS) {
-        return ret;
+    while (true) {
+        if ((ret = bright_get_msgs(s->brightwheel, &msgs)) != E_SUCCESS) {
+            return ret;
+        }
+
+        if ((ret = bright_get_unread(state->brightState, s->brightwheel, msgs, &msg)) != E_SUCCESS) {
+            return ret;
+        }
+
+        util_re_substitute(RE_PATTERN_INVALID_USASCII, &msg, '^', 0);
+        bright_truncate_msgs(state->brightState->unread, &msg);
+        email_send(s->email, msg, brightwheel);
+
+        if (msg != NULL) {
+            free(msg);
+            msg = NULL;
+        }
+
+        // TODO: Testing
+        break;
     }
-
-
-    if ((ret = bright_get_unread(state->brightState, msgs, &msg)) != E_SUCCESS) {
-        return ret;
-    }
-
-    json_object_put(msg);
-
-    //json_object_put(msgs);
-
-    // TODO: End loop here
 
     // Free Relay objects
     settings_free(s);

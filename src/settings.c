@@ -7,6 +7,7 @@
 
 #include "error.h"
 #include "settings.h"
+#include "util.h"
 
 int settings_read(RelaySettings *s) {
     int ret = E_SUCCESS;
@@ -21,26 +22,51 @@ int settings_read(RelaySettings *s) {
             break;
         }
 
+        // Brightwheel Settings
         if(json_object_object_get_ex(root, "brightwheel", &node) == false) {
             fprintf(stderr, "Unable to load brightwheel settings: %s\n", json_util_get_last_err());
             ret =  E_JSON_PARSE;
             break;
         }
 
-        if(json_object_object_get_ex(node, "token", &obj) == false) {
-            fprintf(stderr, "Unable to load brightwheel token: %s\n", json_util_get_last_err());
+        if ((ret = util_json_get_str(node, "token", &(s->brightwheel->token), true)) != E_SUCCESS) {
+            break;
+        }
+
+        if ((ret = util_json_get_bool(node, "includeBroadcasts", &(s->brightwheel->includeBroadcasts))) != E_SUCCESS) {
+            break;
+        }
+
+        if ((ret = util_json_get_bool(node, "includeGuardians", &(s->brightwheel->includeGuardians))) != E_SUCCESS) {
+            break;
+        }
+
+        // Email Settings
+        if(json_object_object_get_ex(root, "email", &node) == false) {
+            fprintf(stderr, "Unable to load email settings: %s\n", json_util_get_last_err());
             ret =  E_JSON_PARSE;
             break;
         }
 
-        if ((ret = settings_get_str(obj, &(s->brightwheel->token))) != E_SUCCESS) {
+        if ((ret = util_json_get_str(node, "sender", &(s->email->sender), true)) != E_SUCCESS) {
+            break;
+        }
+
+        if ((ret = util_json_get_str(node, "password", &(s->email->password), true)) != E_SUCCESS) {
+            break;
+        }
+
+        if ((ret = util_json_get_int(node, "throttle", &(s->email->throttle))) != E_SUCCESS) {
+            break;
+        }
+
+        if ((ret = util_json_get_array(node, "receipients", &(s->email->receipients))) != E_SUCCESS) {
             break;
         }
 
         if ((ret = settings_validate(s)) != E_SUCCESS) {
             break;
         }
-        // TODO: implement email settings
         break;
     }
 
@@ -61,26 +87,6 @@ static int settings_validate(RelaySettings *s) {
     return E_SUCCESS;
 }
 
-static int settings_get_str(struct json_object *obj, char **dest) {
-    const char *str = NULL;
-    int len = 0;
-
-    if((str = json_object_get_string(obj)) == NULL) {
-        fprintf(stderr, "Unable to load brightwheel token: %s\n", json_util_get_last_err());
-        return E_JSON_ACCESS;
-    }
-    len = strlen(str);
-
-    if ((*dest = calloc(len+1, 1)) == NULL) {
-        fprintf(stderr, "%s: Unable to allocate memory for string\n", __func__);
-        return E_OUTOFMEMORY;
-    }
-
-    strncpy(*dest, str, len);
-
-    return E_SUCCESS;
-}
-
 RelaySettings* settings_new() {
     RelaySettings *s = NULL;
     if ((s = calloc(sizeof(RelaySettings), 1)) == NULL) {
@@ -88,7 +94,7 @@ RelaySettings* settings_new() {
         return NULL;
     }
 
-    if ((s->brightwheel = calloc(sizeof(BrightwheelSettings), 1)) == NULL) {
+    if ((s->brightwheel = calloc(sizeof(BrightSettings), 1)) == NULL) {
         fprintf(stderr, "Unable to allocate memory for Brightwheel struct\n");
         return NULL;
     }
@@ -109,7 +115,7 @@ void settings_free(RelaySettings *s) {
     s = NULL;
 }
 
-static void settings_brightwheel_free(BrightwheelSettings *s) {
+static void settings_brightwheel_free(BrightSettings *s) {
     if (s->token != NULL) {
         free(s->token);
         s->token = NULL;
@@ -127,17 +133,14 @@ static void settings_email_free(EmailSettings *s) {
         s->sender = NULL;
     }
 
-    if (s->receipients != NULL) {
-        free(s->receipients);
-        s->receipients = NULL;
-    }
-
     if (s->password != NULL) {
         free(s->password);
         s->password = NULL;
     }
 
-    // TODO: implement email free
+    // Free entires in receipients array
+    curl_slist_free_all(s->receipients);
+
     if (s != NULL) {
         free(s);
         s = NULL;

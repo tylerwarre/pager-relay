@@ -2,9 +2,12 @@
     "email": {
         "sender": "",
         "receipients": [],
-        "password": ""
+        "password": "",
+        "throttle": 300
     },
     "brightwheel": {
-        "token": ""
+        "token": "",
+        "includeBroadcasts": false,
+        "includeGuardians": false
     }
 }

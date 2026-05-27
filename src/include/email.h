@@ -1,0 +1,43 @@
+#ifndef EMAIL_H
+#define EMAIL_H
+
+#include "email.h"
+#include "settings.h"
+
+#include <curl/curl.h>
+
+// Spec says the max is 1000, but unclear if that includes headers (probably not?)
+#define EMAIL_MAX_LEN 500
+
+typedef struct EmailCtx {
+    size_t bytes_read;
+    char *msg;
+} EmailCtx;
+
+typedef enum {
+   brightwheel
+} EmailType;
+
+static const char *EMAIL_FMT =
+    "To: %s\r\n"
+    "From: %s\r\n"
+    "Content-Type: text/plain; charset=us-ascii\r\n"
+    "Content-Transfer-Encoding: 7bit\r\n"
+    "MIME-Version: 1.0\r\n"
+    "Date: %s\r\n"
+    "Subject: %s\r\n"
+    "\r\n"
+    "%s"
+    "\r\n";
+
+static const int date_len = 31;
+static const char *SUBJ_BRIGHTWHEEL = "Brightwheel Fwd";
+
+int email_send(EmailSettings *s, char *msg, EmailType type);
+static size_t cb_read(char *ptr, size_t size, size_t nmemb, void *userp);
+static int email_len(EmailSettings *s, char *body, EmailType type);
+static char* prepare_email(EmailSettings *s, char *body, EmailType type);
+static int recipient_str_len(struct curl_slist *recipients);
+static char* recipients_tostring(struct curl_slist *recipients);
+
+#endif

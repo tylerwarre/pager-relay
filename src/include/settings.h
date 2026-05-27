@@ -3,28 +3,32 @@
 
 #include <json-c/json_object.h>
 
-typedef struct BrightwheelSettings {
+#include "util.h"
+
+typedef struct BrightSettings {
     char *token;
-} BrightwheelSettings;
+    bool includeBroadcasts;
+    bool includeGuardians;
+} BrightSettings;
 
 typedef struct EmailSettings {
     char *sender;
-    char *receipients;
+    struct curl_slist *receipients;
     char *password;
+    int throttle;
 } EmailSettings;
 
 typedef struct RelaySettings {
     EmailSettings *email;
-    BrightwheelSettings *brightwheel;
+    BrightSettings *brightwheel;
 } RelaySettings;
 
 
 int settings_read(RelaySettings *s);
 static int settings_validate(RelaySettings *s);
-static int settings_get_str(struct json_object *obj, char **dest);
 RelaySettings* settings_new();
 void settings_free(RelaySettings *s);
-static void settings_brightwheel_free(BrightwheelSettings *s);
+static void settings_brightwheel_free(BrightSettings *s);
 static void settings_email_free(EmailSettings *s);
 
 #endif
