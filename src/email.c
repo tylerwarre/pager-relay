@@ -138,7 +138,6 @@ int email_send(EmailSettings *s, char *body, EmailType type) {
     }
 
     upload_ctx.msg = msg;
-    // TODO: Testing End
 
     while (true) {
         if ((curl = curl_easy_init()) == NULL) {

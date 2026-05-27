@@ -18,7 +18,6 @@ typedef enum {
    brightwheel
 } EmailType;
 
-// TODO: Update "To/From" to not use <>
 static const char *EMAIL_FMT =
     "To: %s\r\n"
     "From: %s\r\n"
